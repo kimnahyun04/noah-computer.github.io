@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Noah Pacman — Limit + Wall Collision + All Coins + Big Coins + Sound + Stage Complete</title>
+<link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.0/DungGeunMo.css" rel="stylesheet">
+<style>
+  /* ============================================================
+     🌑 기본 세팅
+     ============================================================ */
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background: black;
+    overflow: hidden;
+  }
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+  }
+  .background {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: url('./팩맨-수정.png') center/contain no-repeat;
+    z-index: 0;
+  }
+
+  /* ============================================================
+     🍬 코인 (작은 코인) - 이미지 + 회전
+     ============================================================ */
+  .coin {
+    position: absolute;
+    width: 0.9vw;
+    height: 0.9vw;
+    background: url('./코인.png') center/contain no-repeat;
+    background-size: 100% auto;
+    image-rendering: pixelated;
+    z-index: 2;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    animation: coinSpin 2s linear infinite;
+  }
+  @keyframes coinSpin {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(180deg) scale(1.1); filter: brightness(1.4); }
+    100% { transform: rotateY(360deg); }
+  }
+
+  /* ============================================================
+     👑 왕코인 - 이미지 + 반짝 회전
+     ============================================================ */
+  .big-coin {
+    position: absolute;
+    width: 2.5vw;
+    height: 2.5vw;
+    background: url('./왕코인.png') center/contain no-repeat;
+    image-rendering: pixelated;
+    z-index: 4;
+    animation: bigSpin 2s linear infinite;
+    filter: drop-shadow(0 0 0.3vw gold);
+  }
+  @keyframes bigSpin {
+    0% { transform: rotateY(0deg); filter: brightness(1) drop-shadow(0 0 0.3vw gold); }
+    50% { transform: rotateY(180deg); filter: brightness(1.6) drop-shadow(0 0 0.6vw gold); }
+    100% { transform: rotateY(360deg); filter: brightness(1) drop-shadow(0 0 0.3vw gold); }
+  }
+
+  /* ============================================================
+     😋 팩맨
+     ============================================================ */
+  .pacman {
+  position: absolute;
+  width: 5.2vw;             /* 🔹 약간 크게 조정 가능 */
+  height: auto;
+  background: none;
+  image-rendering: pixelated;
+  z-index: 5;
+  transition: transform 0.05s linear;
+}
+.pacman img {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+}
+
+
+  /* ============================================================
+     🟩 이동 제한 경계 (limit-area)
+     ============================================================ */
+  .limit-area {
+    position: absolute;
+    top: 5.5vw;
+    left: 11vh;          /* 원본 값 유지 */
+    width: 87.5vw;       /* 이동 가능 가로 */
+    height: 79.5vh;      /* 이동 가능 세로 */
+    border: 0.3vh dashed rgba(0, 255, 64, 0); /* 디버깅 시 불투명도로 확인 */
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* ============================================================
+     🚫 내부 장애물 벽 (투명) - 충돌만
+     ============================================================ */
+  .wall {
+    position: absolute;
+    border: 0.3vh dashed rgba(0, 255, 64, 0); /* 필요 시 0.6 등으로 확인 */
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0; /* 완전 숨김 */
+  }
+
+  /* ============================================================
+     🎉 스테이지 완료 문구
+     ============================================================ */
+  .stage-complete {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'DungGeunMo', monospace;  /* 💾 픽셀폰트 */
+    font-size: 4vw;
+    color: #00fff2;
+    text-shadow:
+      0 0 0.4vw #00ffff,
+      0 0 0.8vw #00e0ff,
+      0 0 1.6vw #0099ff,
+      0 0 2.4vw #0066ff;
+    letter-spacing: 0.1em;
+    text-align: center;
+    display: none;
+    z-index: 20;
+    animation: stageBlink 1s infinite alternate;
+  }
+  @keyframes stageBlink {
+    from {
+      filter: brightness(1);
+      transform: translate(-50%, -50%) scale(1);
+    }
+    to {
+      filter: brightness(1.8);
+      transform: translate(-50%, -50%) scale(1.05);
+    }
+  }
+
+  /* 🔲 어두운 배경 (전체 화면 덮기) */
+.warning-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  backdrop-filter: blur(0.3vw);
+}
+
+/* ⚠️ 경고창 (이미지만 작게 중앙에 표시) */
+.warning-window {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 70vw;       /* ✅ 팝업창 크기만 조절 */
+  height: 55vh;
+  transform: translate(-50%, -50%);
+  background: center / contain no-repeat;
+  image-rendering: pixelated;
+  animation: warningGlitch 0.15s steps(2, start) infinite;
+}
+
+@keyframes warningGlitch {
+  0% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+  50% { transform: translate(calc(-50% + 0.3vw), calc(-50% - 0.3vh)) scale(1.02); filter: brightness(1.4) contrast(1.3); }
+  100% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+}
+
+.video-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: black;
+  z-index: 999999;
+}
+
+.video-overlay video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* ✅ 화면 꽉 채워서 보이게 */
+  display: block;    /* ✅ 브라우저 렌더링 버그 방지 */
+  background: black; /* ✅ 깜박임 방지 */
+}
+
+
+</style>
+</head>
+
+<body>
+  
+<!-- ⚠️ 경고 배경 + 경고 이미지 분리 -->
+<div class="warning-overlay" id="warningOverlay">
+  <div class="warning-window" id="warningWindow"></div>
+</div>
+
+
+  <div class="stage" id="stage">
+    <div class="background"></div>
+    <div class="limit-area" id="limit"></div> <!-- 이동 제한 경계 -->
+
+    <!-- =======================
+         🔒 보이지 않는 벽 (충돌만)
+         ======================= -->
+    <div class="wall" style="top: 19.7vh; left: 12.9vw; width: 4.1vw; height: 69.8vh;"></div>
+    <div class="wall" style="top: 19.7vh; left: 82.7vw; width: 4.1vw; height: 69.8vh;"></div>
+
+    <div class="wall" style="top: 10vh; left: 21.6vw; width: 4.1vw; height: 69.8vh;"></div>
+    <div class="wall" style="top: 10vh; left: 74vw; width: 4.1vw; height: 69.8vh;"></div>
+
+    <div class="wall" style="top: 86vh; left: 29.7vw; width: 40.3vw; height: 3.2vh;"></div>
+    <div class="wall" style="top: 10.3vh; left: 29.7vw; width: 40.3vw; height: 3.2vh;"></div>
+
+    <div class="wall" style="top: 36.5vh; left: 39.3vw; width: 21.1vw; height: 9vh;"></div>
+    <div class="wall" style="top: 46vh; left: 39.3vw; width: 5.2vw; height: 17vh;"></div>
+    <div class="wall" style="top: 46vh; left: 55.2vw; width: 5.2vw; height: 17vh;"></div>
+
+    <div class="wall" style="top: 20.2vh; left: 31.2vw; width: 37.3vw; height: 7.3vh;"></div>
+    <div class="wall" style="top: 71.8vh; left: 31.2vw; width: 37.3vw; height: 7.3vh;"></div>
+
+    <div class="wall" style="top: 58.3vh; left: 31.2vw; width: 4vw; height: 12vh;"></div>
+    <div class="wall" style="top: 58.3vh; left: 64.5vw; width: 4vw; height: 12vh;"></div>
+
+    <div class="wall" style="top: 29.3vh; left: 31.2vw; width: 4vw; height: 12vh;"></div>
+    <div class="wall" style="top: 29.3vh; left: 64.5vw; width: 4vw; height: 12vh;"></div>
+
+    <!-- 팩맨 -->
+    <div class="pacman" id="pacman">
+  <img src="./팩맨.gif" alt="Pacman">
+</div>
+
+
+  <!-- 🎉 스테이지 완료 문구 -->
+  <div class="stage-complete" id="stageCompleteText">STAGE ONE CLEAR!</div>
+
+  <!-- 🎵 코인 소리 -->
+  <audio id="coinSound" src="코인소리.mp3" preload="auto"></audio>
+  <audio id="smallCoinSound" src="작은코인.mp3" preload="auto"></audio>
+  <audio id="bgMusic" src="./팩맨 배경음.mp3" preload="auto" loop></audio>
+  <audio id="successSound" src="./성공 음향.mp3" preload="auto"></audio>
+
+<!-- 🎬 영상 오버레이 -->
+<div class="video-overlay" id="videoOverlay" style="display:none;">
+  <video id="surviveVideo" src="./팩맨 살아남을때까지 1.mp4"></video>
+</div>
+
+
+  <!-- 🎵 효과음 -->
+<audio id="errorSound" src="./윈도우-송.mp3" preload="auto"></audio>
+
+<!-- ⚠️ 경고 이미지 -->
+<div class="warning-screen" id="warningScreen"></div>
+<script>
+/* ============================================================
+   🎮 Noah Pacman — “빨간 네모 안 + 벽 충돌 + 모든 코인 + 왕코인 + 소리 + 완료문구”
+============================================================ */
+const stage = document.getElementById("stage");
+const pacman = document.getElementById("pacman");
+const limit  = document.getElementById("limit");
+const coinSound = document.getElementById("coinSound");
+const smallCoinSound = document.getElementById("smallCoinSound"); // 일반 코인 소리
+
+let x = 9.2; // 팩맨 시작 X (vw)
+let y = 78; // 팩맨 시작 Y (vh)
+const speed = 1; // 이동 속도 (vw/vh 단위 개념적으로 일치)
+
+pacman.style.left = x + "vw";
+pacman.style.top  = y + "vh";
+
+/* ============================================================
+   🍬 코인 좌표 (전부 유지, 생략 없음)
+============================================================ */
+const coinPositions = [
+  // 맨왼쪽 줄
+  {x: 9.2, y: 14}, {x: 9.2, y: 18}, {x: 9.2, y: 22}, {x: 9.2, y: 26}, {x: 9.2, y: 30}, {x: 9.2, y: 34}, {x: 9.2, y: 38}, {x: 9.2, y: 42}, {x: 9.2, y: 46},
+  {x: 9.2, y: 50}, {x: 9.2, y: 54}, {x: 9.2, y: 58}, {x: 9.2, y: 62}, {x: 9.2, y: 66}, {x: 9.2, y: 70}, {x: 9.2, y: 74}, {x: 9.2, y: 78},
+
+  {x: 10.2, y: 14}, {x: 12, y: 14}, {x: 13.8, y: 14}, {x: 15.6, y: 14}, {x: 17.4, y: 14}, {x: 19.2, y: 14},
+
+  {x: 19.2, y: 18}, {x: 19.2, y: 22}, {x: 19.2, y: 26}, {x: 19.2, y: 30}, {x: 19.2, y: 34}, {x: 19.2, y: 38}, {x: 19.2, y: 42}, {x: 19.2, y: 46},
+  {x: 19.2, y: 50}, {x: 19.2, y: 54}, {x: 19.2, y: 58}, {x: 19.2, y: 62}, {x: 19.2, y: 66}, {x: 19.2, y: 70}, {x: 19.2, y: 74}, {x: 19.2, y: 78}, {x: 19.2, y: 82},
+  {x: 19.2, y: 86},
+
+  {x: 20.2, y: 86}, {x: 22, y: 86}, {x: 23.8, y: 86}, {x: 25.6, y: 86}, {x: 27.5, y: 86},
+
+  {x: 27.6, y: 18}, {x: 27.6, y: 22}, {x: 27.6, y: 26}, {x: 27.6, y: 30}, {x: 27.6, y: 34}, {x: 27.6, y: 38}, {x: 27.6, y: 42}, {x: 27.6, y: 46},
+  {x: 27.6, y: 50}, {x: 27.6, y: 54}, {x: 27.6,  y: 58}, {x: 27.6, y: 62}, {x: 27.6, y: 66}, {x: 27.6, y: 70}, {x: 27.6, y: 74}, {x: 27.6, y: 78}, {x: 27.6, y: 82},
+
+  {x: 90, y: 14}, {x: 90, y: 18}, {x: 90, y: 22}, {x: 90, y: 26}, {x: 90, y: 30}, {x: 90, y: 34}, {x: 90, y: 38}, {x: 90, y: 42}, {x: 90, y: 46},
+  {x: 90, y: 50}, {x: 90, y: 54}, {x: 90, y: 58}, {x: 90, y: 62}, {x: 90, y: 66}, {x: 90, y: 70}, {x: 90, y: 74}, {x: 90, y: 78},
+
+  {x: 88.8, y: 14}, {x: 87.6, y: 14}, {x: 85.8, y: 14}, {x: 84, y: 14}, {x: 82.2, y: 14}, {x: 80.4, y: 14},
+
+  {x: 80.4, y: 18}, {x: 80.4, y: 22}, {x: 80.4, y: 26}, {x: 80.4, y: 30}, {x: 80.4, y: 34}, {x: 80.4, y: 38}, {x: 80.4, y: 42}, {x: 80.4, y: 46},
+  {x: 80.4, y: 50}, {x: 80.4, y: 54}, {x: 80.4, y: 58}, {x: 80.4, y: 62}, {x: 80.4, y: 66}, {x: 80.4, y: 70}, {x: 80.4, y: 74}, {x: 80.4, y: 78}, {x: 80.4, y: 82},
+  {x: 80.4, y: 86},
+
+  {x: 79.4, y: 86}, {x: 77.6, y: 86}, {x: 75.8, y: 86}, {x: 74, y: 86}, {x: 71.8, y: 86},
+
+  {x: 71.4, y: 18}, {x: 71.4, y: 22}, {x: 71.4, y: 26}, {x: 71.4, y: 30}, {x: 71.4, y: 34}, {x: 71.4, y: 38}, {x: 71.4, y: 42}, {x: 71.4, y: 46},
+  {x: 71.4, y: 50}, {x: 71.4, y: 54}, {x: 71.4,  y: 58}, {x: 71.4, y: 62}, {x: 71.4, y: 66}, {x: 71.4, y: 70}, {x: 71.4, y: 74}, {x: 71.4, y: 78}, {x: 71.4, y: 82},
+
+  {x: 30, y: 82}, {x: 33, y: 82}, {x: 36, y: 82}, {x: 39, y: 82}, {x: 42, y: 82}, {x: 45, y: 82}, {x: 48, y: 82}, {x: 51, y: 82},{x: 54, y: 82},
+  {x: 57, y: 82}, {x: 60, y: 82}, {x: 63, y: 82}, {x: 66, y: 82}, {x: 69, y: 82},
+
+  {x: 30, y: 16}, {x: 33, y: 16}, {x: 36, y: 16}, {x: 39, y: 16}, {x: 42, y: 16}, {x: 45, y: 16}, {x: 48, y: 16}, {x: 51, y: 16},{x: 54, y: 16},
+  {x: 57, y: 16}, {x: 60, y: 16}, {x: 63, y: 16}, {x: 66, y: 16}, {x: 69, y: 16},
+
+  {x: 32.8, y: 43}, {x: 66.2, y: 43}, {x: 32.8, y: 55.2},{x: 66.2, y: 55.2},
+
+  {x: 36, y: 30}, {x: 39, y: 30},{x: 42, y: 30},{x: 45, y: 30},{x: 48, y: 30},{x: 51, y: 30},{x: 54, y: 30},{x: 57, y: 30},{x: 60, y: 30},{x: 63, y: 30},
+  {x: 36, y: 67}, {x: 39, y: 67},{x: 42, y: 67},{x: 45, y: 67},{x: 48, y: 67},{x: 51, y: 67},{x: 54, y: 67},{x: 57, y: 67},{x: 60, y: 67},{x: 63, y: 67}
+];
+
+/* ============================================================
+   🟡 왕코인 — 7개
+============================================================ */
+const bigCoinPositions = [
+  {x: 8.4, y: 82},
+  {x: 26.8, y: 12},
+  {x: 70.6, y: 12},
+  {x: 49, y: 50},
+  {x: 46.2, y: 52},
+  {x: 51.8, y: 52},
+  {x: 89.2, y: 82}
+];
+
+/* ============================================================
+   💎 코인 생성 (전부 표시)
+============================================================ */
+const coins = [];
+coinPositions.forEach(pos => {
+  const coin = document.createElement("div");
+  coin.classList.add("coin");
+  coin.style.left = pos.x + "vw";
+  coin.style.top  = pos.y + "vh";
+  stage.appendChild(coin);
+  coins.push(coin);
+});
+
+// 왕코인 생성
+const bigCoins = [];
+bigCoinPositions.forEach(pos => {
+  const bigCoin = document.createElement("div");
+  bigCoin.classList.add("big-coin");
+  bigCoin.style.left = pos.x + "vw";
+  bigCoin.style.top  = pos.y + "vh";
+  stage.appendChild(bigCoin);
+  bigCoins.push(bigCoin);
+});
+
+/* ============================================================
+   ⌨️ 이동 + 경계 제한 + 벽 충돌 (단 하나의 리스너만 사용)
+============================================================ */
+window.addEventListener("keydown", e => {
+  if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) e.preventDefault();
+
+  const rectLimit = limit.getBoundingClientRect();
+  const pRectNow  = pacman.getBoundingClientRect();
+  let nx = x;
+  let ny = y;
+// 🎬 첫 이동 후 1초 뒤 영상 재생 (한 번만 실행)
+if (!window.firstMoveTriggered) {
+  window.firstMoveTriggered = true;
+  setTimeout(() => {
+    const overlay = document.getElementById("videoOverlay");
+    const video = document.getElementById("surviveVideo");
+    overlay.style.display = "block";
+    video.currentTime = 0;
+    video.play().catch(()=>{});
+    // 영상 끝나면 닫히기
+    video.onended = () => overlay.style.display = "none";
+  }, 1000);
+}
+
+  switch (e.key) {
+    case "ArrowUp":
+      ny -= speed;
+      pacman.style.transform = "rotate(-90deg) scaleX(1)";
+      break;
+    case "ArrowDown":
+      ny += speed;
+      pacman.style.transform = "rotate(90deg) scaleX(1)";
+      break;
+    case "ArrowLeft":
+      nx -= speed;
+      pacman.style.transform = "rotate(0deg) scaleX(-1)";
+      break;
+    case "ArrowRight":
+      nx += speed;
+      pacman.style.transform = "rotate(0deg) scaleX(1)";
+      break;
+    default:
+      return;
+  }
+
+  // 이동 후보 적용
+  pacman.style.left = nx + "vw";
+  pacman.style.top  = ny + "vh";
+
+  // 충돌 검사
+  if (isColliding()) {
+    // 🚫 충돌 시 원위치 복귀 + 살짝 반동 (튕김 효과)
+    nx = x;
+    ny = y;
+
+    // 💥 이동 방향 반대쪽으로 아주 살짝 밀기
+    const bouncePower = 0.25; // 🔹 튕김 강도 (0.2~0.3이 자연스러움)
+    switch (e.key) {
+      case "ArrowUp":    ny += bouncePower; break;
+      case "ArrowDown":  ny -= bouncePower; break;
+      case "ArrowLeft":  nx += bouncePower; break;
+      case "ArrowRight": nx -= bouncePower; break;
+    }
+
+    pacman.style.left = nx + "vw";
+    pacman.style.top  = ny + "vh";
+
+    // 그래도 벽과 닿으면 완전 롤백
+    if (isColliding()) {
+      nx = x;
+      ny = y;
+      pacman.style.left = x + "vw";
+      pacman.style.top  = y + "vh";
+    }
+  }
+
+  // limit-area 내부만 허용
+  const rect = limit.getBoundingClientRect();
+  const pRect = pacman.getBoundingClientRect();
+  if (
+    pRect.left >= rect.left &&
+    pRect.right <= rect.right &&
+    pRect.top >= rect.top &&
+    pRect.bottom <= rect.bottom
+  ) {
+    x = nx;
+    y = ny;
+  }
+
+  checkCoinCollision();
+  checkBigCoinCollision();
+  checkStageComplete();
+});
+
+
+
+/* ============================================================
+   🎵 사운드 함수
+============================================================ */
+function playSmallCoinSound() {
+  try { smallCoinSound.currentTime = 0; smallCoinSound.play(); } catch(e){}
+}
+function playBigCoinSound() {
+  try { coinSound.currentTime = 0; coinSound.play(); } catch(e){}
+}
+
+/* ============================================================
+   🍬 코인 충돌 시
+============================================================ */
+function checkCoinCollision() {
+  const pacRect = pacman.getBoundingClientRect();
+  coins.forEach(c => {
+    if (!c.dataset.hit) {
+      const r = c.getBoundingClientRect();
+      const overlap = !(
+        pacRect.right < r.left ||
+        pacRect.left > r.right ||
+        pacRect.bottom < r.top ||
+        pacRect.top > r.bottom
+      );
+      if (overlap) {
+        c.dataset.hit = "1";
+        c.style.transform = "scale(1.3)";
+        c.style.opacity = "0";
+        playSmallCoinSound(); // ✅ 일반 코인 소리 재생
+        setTimeout(() => c.remove(), 150);
+      }
+    }
+  });
+}
+
+/* ============================================================
+   👑 왕코인 충돌 시
+============================================================ */
+let bigCoinCount = 0;
+function checkBigCoinCollision() {
+  const pacRect = pacman.getBoundingClientRect();
+  bigCoins.forEach(c => {
+    if (!c.dataset.hit) {
+      const r = c.getBoundingClientRect();
+      const overlap = !(
+        pacRect.right < r.left ||
+        pacRect.left > r.right ||
+        pacRect.bottom < r.top ||
+        pacRect.top > r.bottom
+      );
+      if (overlap) {
+        c.dataset.hit = "1";
+        c.style.transform = "scale(1.3)";
+        c.style.opacity = "0";
+        playBigCoinSound(); // ✅ 왕코인 소리 재생
+        setTimeout(() => c.remove(), 150);
+        bigCoinCount++;
+      }
+    }
+  });
+}
+
+/* ============================================================
+   🎊 스테이지 완료 체크 & 표시
+============================================================ */
+function remainingCoinsCount() {
+  return document.querySelectorAll('.coin:not([data-hit])').length;
+}
+function remainingBigCoinsCount() {
+  return document.querySelectorAll('.big-coin:not([data-hit])').length;
+}
+function checkStageComplete() {
+  if (remainingCoinsCount() === 0 && remainingBigCoinsCount() === 0) {
+    showStageComplete();
+  }
+}
+function showStageComplete() {
+  const text = document.getElementById("stageCompleteText");
+  if (text.style.display !== "block") {
+    text.style.display = "block";
+    text.style.opacity = "0";
+    text.animate(
+      [
+        { opacity: 0, transform: "translate(-50%, -50%) scale(0.8)" },
+        { opacity: 1, transform: "translate(-50%, -50%) scale(1.05)" },
+        { opacity: 1, transform: "translate(-50%, -50%) scale(1)" }
+      ],
+      { duration: 1200, fill: "forwards", easing: "ease-out" }
+    );
+  }
+}
+
+/* ============================================================
+   🚫 벽 충돌 감지 함수 (회전 대응 포함)
+============================================================ */
+function isColliding() {
+  const pRect = pacman.getBoundingClientRect();
+
+  // 🎯 팩맨 중심 좌표 계산
+  const px = pRect.left + pRect.width / 2;
+  const py = pRect.top  + pRect.height / 2;
+  const radius = pRect.width * 0.4; // 팩맨 반경
+
+  const walls = document.querySelectorAll(".wall");
+
+  for (let w of walls) {
+    const rect = w.getBoundingClientRect();
+    const style = window.getComputedStyle(w);
+    const transform = style.transform;
+
+    // 📐 회전된 벽 각도 추출
+    let angle = 0;
+    if (transform !== "none" && transform.includes("matrix")) {
+      const values = transform.match(/matrix\(([^)]+)\)/)[1].split(",");
+      const a = parseFloat(values[0]);
+      const b = parseFloat(values[1]);
+      angle = Math.atan2(b, a); // 라디안
+    }
+
+    // 🧮 벽 중심 및 절반 크기
+    const cx = rect.left + rect.width  / 2;
+    const cy = rect.top  + rect.height / 2;
+    const halfW = rect.width  / 2;
+    const halfH = rect.height / 2;
+
+    // 팩맨 좌표를 벽 좌표계로 회전 변환
+    const dx = px - cx;
+    const dy = py - cy;
+    const rotatedX = dx * Math.cos(-angle) - dy * Math.sin(-angle);
+    const rotatedY = dx * Math.sin(-angle) + dy * Math.cos(-angle);
+
+    // 🎯 실제 충돌 판정 (여유 0.3 * radius)
+    const hitX = Math.abs(rotatedX) <= halfW + radius * 0.3;
+    const hitY = Math.abs(rotatedY) <= halfH + radius * 0.3;
+    if (hitX && hitY) return true;
+  }
+
+  return false;
+}
+
+
+
+/* ============================================================
+   🔁 반응형 코인 위치 재계산 (윈도우 리사이즈 대응)
+============================================================ */
+function repositionCoins() {
+  coins.forEach((coin, i) => {
+    const pos = coinPositions[i];
+    if (!coin.dataset.hit) {
+      coin.style.left = pos.x + "vw";
+      coin.style.top  = pos.y + "vh";
+    }
+  });
+  // 왕코인은 좌표 고정 (제거된 건 그대로 삭제 상태)
+}
+window.addEventListener("resize", repositionCoins);
+
+
+function triggerWarning() {
+  const overlay = document.getElementById("warningOverlay");
+  const windowBox = document.getElementById("warningWindow");
+  const sound = document.getElementById("errorSound");
+
+  // 미리 사운드 준비 (브라우저 버퍼 딜레이 방지)
+  sound.pause();
+  sound.currentTime = 0;
+  sound.load();
+
+  // 첫 번째 이미지 표시 + 동시에 재생
+  overlay.style.display = "block";
+  windowBox.style.backgroundImage = "url('./팩맨-경고-1.png')";
+  requestAnimationFrame(() => { // ✅ 같은 렌더 프레임 안에서 실행
+    sound.play().catch(() => {}); // 사운드 재생
+  });
+
+  // 2초 후 두 번째 이미지 & 즉시 재생
+  setTimeout(() => {
+    sound.pause();
+    sound.currentTime = 0;
+    sound.load();
+    windowBox.style.backgroundImage = "url('./팩맨-경고-2.png')";
+    requestAnimationFrame(() => {
+      sound.play().catch(() => {});
+    });
+  }, 2000);
+
+  // 4초 후 사라지기
+  setTimeout(() => {
+    overlay.style.display = "none";
+  }, 4000);
+}
+
+
+/* 페이지 로드 후 10초 뒤 자동 실행 */
+window.addEventListener("load", () => {
+  setTimeout(triggerWarning, 15000);
+});
+
+// ============================================================
+// 🎵 스테이지 1 전체 브금 재생
+// ============================================================
+
+// ============================================================
+// 🎵 스테이지 1 전체 브금 — 첫 입력 시 재생
+// ============================================================
+const bgMusic = document.getElementById("bgMusic");
+bgMusic.volume = 0.6;
+
+// 자동재생 정책 우회 — 클릭 또는 키입력 1회 필요
+function unlockAudioOnce() {
+  bgMusic.play().catch(() => {}); // 🔊 첫 입력 시 재생
+  window.removeEventListener("pointerdown", unlockAudioOnce);
+  window.removeEventListener("keydown", unlockAudioOnce);
+}
+window.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+window.addEventListener("keydown", unlockAudioOnce, { once: true });
+
+// 페이지 로드시 미리 로드
+window.addEventListener("load", () => {
+  bgMusic.load();
+});
+
+function showStageComplete() {
+  const text = document.getElementById("stageCompleteText");
+  const successSound = document.getElementById("successSound");
+
+  if (text.style.display !== "block") {
+    text.style.display = "block";
+    text.style.opacity = "0";
+
+    // ✨ 애니메이션
+    text.animate(
+      [
+        { opacity: 0, transform: "translate(-50%, -50%) scale(0.8)" },
+        { opacity: 1, transform: "translate(-50%, -50%) scale(1.05)" },
+        { opacity: 1, transform: "translate(-50%, -50%) scale(1)" }
+      ],
+      { duration: 1200, fill: "forwards", easing: "ease-out" }
+    );
+
+    // 🔊 성공 사운드 재생
+    try {
+      successSound.currentTime = 0;
+      successSound.play().catch(()=>{});
+    } catch(e){}
+  }
+}
+// ============================================================
+// 🧱 벽 히트박스 살짝 확장 (팩맨 크기 커질 때 벽 관통 방지용)
+// ============================================================
+function expandWalls(paddingVW = 0.4, paddingVH = 0.4) {
+  const walls = document.querySelectorAll(".wall");
+  walls.forEach(wall => {
+    const left = parseFloat(wall.style.left);
+    const top = parseFloat(wall.style.top);
+    const width = parseFloat(wall.style.width);
+    const height = parseFloat(wall.style.height);
+
+    // ✅ 살짝 확장: 0.4vw, 0.4vh 정도면 충분 (필요시 값만 조정)
+    wall.style.left = (left - paddingVW) + "vw";
+    wall.style.top = (top - paddingVH) + "vh";
+    wall.style.width = (width + paddingVW * 2) + "vw";
+    wall.style.height = (height + paddingVH * 2) + "vh";
+  });
+}
+
+// 페이지 로드 시 적용
+window.addEventListener("load", () => {
+  expandWalls(0.65, 0.65); // 값 조절 가능 (0.3~0.6 정도 추천)
+});
+
+
+</script>
+</body>
+</html>
+
+
+
+
