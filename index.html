@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>index</title>
+  <link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.0/DungGeunMo.css" rel="stylesheet">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: black;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ⭐ 16:9 비율을 화면 중앙에서 유지하는 래퍼 */
+    .video-wrapper {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+
+      /* 🔥 화면 크기에 맞춰 16:9 유지 + 전체 축소 비율 0.82 */
+      width: calc(min(100vw, 100vh * 16/9) * 0.9);
+      height: calc(min(100vw, 100vh * 16/9) / (16/9) * 0.9);
+
+      background: black;
+      overflow: hidden;
+      image-rendering: pixelated;
+      z-index: 1;
+    }
+
+    /* ⭐ 영상은 절대 잘리지 않음 */
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+      image-rendering: pixelated;
+    }
+
+    /* ===== START 버튼 ===== */
+    #startBtn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 25vw;
+      height: 10vh;
+      font-family: 'DungGeunMo', sans-serif;
+      font-size: 1.6vw;
+      color: #fff;
+      background: repeating-linear-gradient(
+        45deg,
+        #005f5f,
+        #004d4d 2px,
+        #003838 4px
+      );
+      border: 4px double #007858;
+      border-radius: 10px;
+      box-shadow:
+        0.6vw 0.6vw 0 #000,
+        0 0 1vw #007858 inset,
+        0 0 2vw rgba(0, 160, 109, 0.5);
+      text-shadow: 1px 1px #000;
+      cursor: pointer;
+      animation: flicker 1.2s infinite alternate;
+      z-index: 10;
+    }
+
+    #startBtn:hover {
+      transform: translate(-50%, -50%) scale(1.05);
+      background-color: #00aaaa;
+      color: #ffffcc;
+      border-color: #00eeee;
+      text-shadow: 1px 1px 0 #003333;
+      box-shadow: 0 0 2vw #00cccc, 0 0 1vw #004d4d inset;
+    }
+
+    @keyframes flicker {
+      0% { filter: brightness(1); }
+      100% { filter: brightness(1.15); }
+    }
+  </style>
+</head>
+
+
+<body>
+
+  <!-- ⭐ 16:9 영상 래퍼 -->
+  <div class="video-wrapper">
+    <video id="introVideo" playsinline preload="auto">
+      <source src="./animation.mp4" type="video/mp4" />
+      브라우저가 비디오를 지원하지 않아요 😥
+    </video>
+  </div>
+
+  <button id="startBtn">▶ noah's story </button>
+
+
+  <script>
+    const video = document.getElementById('introVideo');
+    const startBtn = document.getElementById('startBtn');
+
+    startBtn.addEventListener('click', () => {
+      video.muted = false;
+      video.style.display = 'block';
+
+      setTimeout(() => {
+        video.play().catch(err => {
+          alert('비디오 재생 실패: ' + err.message);
+        });
+        startBtn.style.display = 'none';
+      }, 100);
+    });
+
+    video.addEventListener('ended', () => {
+      window.location.href = 'play.html';
+    });
+  </script>
+
+</body>
+</html>
