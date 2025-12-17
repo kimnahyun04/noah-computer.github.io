@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Noah's Homework Virus — Music Virus</title>
+
+  <style>
+    html, body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      overflow: hidden;
+      image-rendering: pixelated;
+      cursor: url('https://cur.cursors-4u.net/cursors/cur-2/cur115.cur'), auto;
+    }
+
+    @media screen and (orientation: portrait) {
+      body::before {
+        content: "📱 이 스테이지는 가로 모드에서만 플레이할 수 있어요!";
+        position: fixed;
+        inset: 0;
+        background: #000;
+        color: #fff;
+        font-family: 'DungGeunMo', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        font-size: 2.5vh;
+        padding: 5vw;
+        z-index: 999999999;
+      }
+    }
+
+    /* ============================
+       16:9 고정 게임 화면
+    ============================ */
+    .game-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .game-area {
+      position: relative;
+      width: calc(100vh * (16 / 9));
+      height: 100vh;
+      max-width: 100vw;
+      max-height: calc(100vw * (9 / 16));
+      overflow: hidden;
+      background: #0b0f1a;
+    }
+
+    .background {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    /* 아이콘 */
+    .icon {
+      position: absolute;
+      width: 7%;
+      filter: drop-shadow(-0.4vw -0.4vh 0 #131313);
+      cursor: pointer;
+      z-index: 5;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .internet { top: 7%; left: 6%; }
+    .mail { top: 20%; left: 6%; }
+    .folder { top: 33%; left: 6%; }
+    .trash { top: 46%; left: 6%; }
+    .music-icon { top: 72%; left: 6%; }
+
+    /* 눈 */
+    .eye-wrapper {
+      position: absolute;
+      top: 0.5%;
+      left: 0;
+      width: 100%;
+      pointer-events: none;
+      z-index: 3;
+    }
+    .eye {
+      width: 100%;
+      transition: transform 0.05s linear;
+    }
+
+    /* 자막 */
+    #subtitle {
+      position: absolute;
+      bottom: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'DungGeunMo', sans-serif;
+      color: white;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid white;
+      border-radius: 10px;
+      padding: 1vh 2vw;
+      font-size: 2.2vh;
+      text-align: center;
+      z-index: 999;
+      display: none;
+    }
+    .next-indicator {
+      font-size: 1.8vh;
+      color: #ffcc00;
+      margin-left: 1vw;
+      animation: blink 1s infinite alternate;
+    }
+    @keyframes blink {
+      from { opacity: 0.3; }
+      to { opacity: 1; }
+    }
+
+    /* 음악플레이어 팝업 */
+    .wmp-popup {
+      position: absolute;
+      top: 8vh;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      z-index: 9999;
+    }
+    .player-img {
+      max-width: 70vw;
+      max-height: 70vh;
+      image-rendering: pixelated;
+      display: block;
+    }
+
+    /* 🎮 리듬게임 PNG = 플레이어 정중앙 고정 */
+    #rhythmGame {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%;
+      height: 100%;
+      z-index: 10000;
+      display: none;
+      image-rendering: pixelated;
+      pointer-events: none;
+    }
+
+    /* 재생 버튼 */
+    .controls {
+      display: flex;
+      gap: 1vw;
+      position: absolute;
+      left: 50%;
+      bottom: 5%;
+      transform: translateX(-50%);
+    }
+    .ctrl-btn {
+      width: 3vw;
+      height: 3vw;
+      background: #797979;
+      border: 2px solid #bbb;
+      color: #fff;
+      font-family: 'DungGeunMo', sans-serif;
+      font-size: 1.6vh;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      image-rendering: pixelated;
+      box-shadow:
+        inset 2px 2px 0 #dcdcdc,
+        inset -2px -2px 0 #505050,
+        2px 2px 0 #000;
+    }
+
+    /* 가짜 마우스 */
+    .fakeMouse {
+      position: absolute;
+      width: 2.8vw;
+      pointer-events: none;
+      display: none;
+      z-index: 9999999;
+      filter: drop-shadow(0 0 0.4vw #000);
+      transition: transform 0.15s ease-out;
+    }
+
+    /* CRT 필터 */
+    .crt-filter {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9998;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255,255,255,0.05),
+          rgba(255,255,255,0.05) 1px,
+          rgba(0,0,0,0.1) 2px
+        );
+      mix-blend-mode: overlay;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .context-menu {
+      position: absolute;
+      background: #1c1c1c;
+      border: 2px solid #aaa;
+      padding: 0.5vh 1vw;
+      font-family: 'DungGeunMo';
+      font-size: 2vh;
+      color: white;
+      display: none;
+      z-index: 99999;
+      image-rendering: pixelated;
+      box-shadow:
+        inset 2px 2px 0 #dcdcdc,
+        inset -2px -2px 0 #505050,
+        2px 2px 0 #000;
+    }
+  /* 🔥 가짜마우스 등장 시 실제 마우스 숨김 */
+html.disable-mouse, body.disable-mouse {
+  cursor: none !important;
+}
+/* ===========================
+   🎈 픽셀 말풍선 + 대사 텍스트
+=========================== */
+.speech-box {
+  position: absolute;
+  top: 70%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1.5vh 2vw;
+  background: #000;
+  border: 3px solid white;
+  image-rendering: pixelated;
+  font-family: 'DungGeunMo';
+  font-size: 2.2vh;
+  color: white;
+  z-index: 10005;
+  display: none;
+  max-width: 70%;
+  text-align: center;
+  box-shadow:
+    inset -3px -3px 0 #555,
+    inset 3px 3px 0 #aaa;
+}
+#arrowLane {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 20000; /* 리듬게임 화면 위 */
+  pointer-events: none;
+}
+
+/* 각 화살표 이미지 공통 */
+.game-arrow {
+  position: absolute;
+  width: 14%;       /* 너가 조절 가능 */
+  left: 43%;        /* 중앙 정렬 기본값 (JS에서 덮어씀) */
+  bottom: -20%;     /* 아래에서 시작 */
+  image-rendering: pixelated;
+  transition: opacity 0.15s;
+}
+
+/* 팡! 사라질 때 */
+.pop-effect {
+  transform: scale(1.3);
+  opacity: 0;
+}
+/* 재생 버튼 */
+
+  </style>
+</head>
+
+<body>
+  <div class="game-container">
+    <div class="game-area">
+
+      <div class="crt-filter" id="crtFilter"></div>
+
+      <img class="background" src="./노아 5단계.gif" />
+
+      <div id="subtitle">
+        <span id="subtitleText"></span>
+        <span class="next-indicator">> 다음</span>
+      </div>
+
+      <!-- 팝업 -->
+      <div id="wmpPopup" class="wmp-popup">
+        <img src="./음악플레이어.png" class="player-img" />
+
+
+        <img id="rhythmGame" src="./리듬게임 화면.png">
+        <!-- 리듬게임 캐릭터 -->
+<img id="rhythmChar" src="./리듬게임 캐릭터.gif"
+
+     style="
+       position:absolute;
+       top:50%;
+       left:50%;
+       transform:translate(-50%, -50%);
+       width:100%;     /* 크기 이건 나중에 네가 조절 */
+       z-index:10001;
+       display:none;
+       image-rendering:pixelated;
+       pointer-events:none;
+     ">
+<!-- 🎤 리듬게임 캐릭터 말풍선 -->
+<div id="speechBubble" class="speech-box">
+  <span id="speechText"></span>
+</div>
+
+        <div class="controls">
+          <button id="btnPrev" class="ctrl-btn">⏮</button>
+          <button id="btnPlay" class="ctrl-btn">▶</button>
+          <button id="btnPause" class="ctrl-btn">❚❚</button>
+          <button id="btnNext" class="ctrl-btn">⏭</button>
+        </div>
+
+        <audio id="wmpAudio" src="./virus-song.mp3"></audio>
+      </div>
+
+      <!-- 가짜 마우스 -->
+      <img class="fakeMouse" id="fakeMouse1" src="./마우스 커서.png">
+      <img class="fakeMouse" id="fakeMouse2" src="./마우스 커서.png">
+      <img class="fakeMouse" id="fakeMouse3" src="./마우스 커서.png">
+
+      <!-- 아이콘 -->
+      <img class="icon internet" src="./아이콘 1.png" />
+      <img class="icon mail" src="./아이콘 2.png" />
+      <img class="icon folder" src="./아이콘 3.png" />
+      <img class="icon trash" src="./아이콘 4.png" />
+      <img class="icon music-icon" src="./음악아이콘.png" />
+
+      <!-- 눈 -->
+      <div class="eye-wrapper" id="eyeWrapper">
+        <img class="eye" id="eye" src="./눈알 1.png" />
+      </div>
+
+      <!-- Delete 메뉴 -->
+      <div id="contextMenu" class="context-menu">
+        <div class="menu-item" id="menuDelete">Delete</div>
+      </div>
+<audio id="clickSound" src="./딸깍.mp3"></audio>
+<audio id="deleteSound" src="./삭제 (2).mp3"></audio>
+
+    </div>
+  </div>
+
+<script>
+
+const clickSound = document.getElementById("clickSound");
+const deleteSound = document.getElementById("deleteSound");
+
+function playNextSound(){
+  clickSound.pause();
+  clickSound.currentTime = 0;
+  clickSound.play().catch(()=>{});
+}
+
+
+
+/* ================================================================
+   👁 반응형 눈알
+================================================================ */
+const eye = document.getElementById("eye");
+const eyeWrapper = document.getElementById("eyeWrapper");
+
+function updateEyePosition(e) {
+  const rect = eyeWrapper.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = e.clientX - cx;
+  const dy = e.clientY - cy;
+
+  const maxMove = rect.width * 0.005;
+  const mx = Math.max(Math.min(dx / 20, maxMove), -maxMove);
+  const my = Math.max(Math.min(dy / 20, maxMove), -maxMove);
+
+  eye.style.transform = `translate(${mx}px, ${my}px)`;
+}
+
+window.addEventListener("mousemove", updateEyePosition);
+window.addEventListener("resize", () => (eye.style.transform = "translate(0,0)"));
+
+
+/* ================================================================
+   📜 시작 자막
+================================================================ */
+const subtitle = document.getElementById("subtitle");
+const subtitleText = document.getElementById("subtitleText");
+const nextButton = document.querySelector(".next-indicator");
+
+const startLines = [
+  "이제 모든 것들은 정상이 아니야",
+  "근데.. 왜 음악 아이콘은 변하지 않았지?"
+];
+
+let startIndex = 0;
+let virusStarted = false; // 👈 중복 방지용
+
+setTimeout(() => {
+  subtitleText.textContent = startLines[0];
+  subtitle.style.display = "block";
+}, 800);
+
+nextButton.onclick = () => {
+  playNextSound(); // 🔊 다음 버튼 사운드
+
+  startIndex++;
+  if (startIndex < startLines.length) {
+    subtitleText.textContent = startLines[startIndex];
+  } else {
+    subtitle.style.display = "none";
+    if (!virusStarted) {
+      virusStarted = true;
+      startMultiMouseVirus();
+    }
+  }
+};
+
+
+/* ================================================================
+   🎵 음악 플레이어 버튼
+================================================================ */
+const wmpPopup = document.getElementById("wmpPopup");
+const audio = document.getElementById("wmpAudio");
+document.getElementById("btnPlay").onclick = () => audio.play();
+document.getElementById("btnPause").onclick = () => audio.pause();
+
+
+/* ================================================================
+   🎯 가짜마우스 + 아이콘들
+================================================================ */
+const fakeMice = [
+  document.getElementById("fakeMouse1"),
+  document.getElementById("fakeMouse2"),
+  document.getElementById("fakeMouse3")
+];
+
+const trashTargets = [
+  document.querySelector(".internet"),
+  document.querySelector(".mail"),
+  document.querySelector(".folder")
+];
+
+const trashIcon = document.querySelector(".trash");
+const musicTarget = document.querySelector(".music-icon");
+
+const crtFilter = document.getElementById("crtFilter");
+
+
+/* ================================================================
+   🧹 Delete 메뉴 만들기
+================================================================ */
+function createIndividualMenu() {
+  const menu = document.createElement("div");
+  menu.className = "context-menu";
+  menu.textContent = "Delete";
+  document.querySelector(".game-area").appendChild(menu);
+  return menu;
+}
+
+const menuList = trashTargets.map(() => createIndividualMenu());
+
+
+/* ================================================================
+   🗑 휴지통 빨려 들어가기
+================================================================ */
+function suckIntoTrash(icon) {
+  return new Promise(resolve => {
+    const tRect = trashIcon.getBoundingClientRect();
+    const tx = tRect.left + tRect.width * 0.45;
+    const ty = tRect.top + tRect.height * 0.55;
+
+    const iRect = icon.getBoundingClientRect();
+    const sx = iRect.left;
+    const sy = iRect.top;
+
+    const clone = icon.cloneNode(true);
+    clone.style.position = "fixed";
+    clone.style.left = sx + "px";
+    clone.style.top = sy + "px";
+    clone.style.width = iRect.width + "px";
+    clone.style.pointerEvents = "none";
+    clone.style.zIndex = "9999999";
+    clone.style.transition = "transform 0.55s ease-out, opacity 0.45s ease-out";
+    document.body.appendChild(clone);
+
+    icon.style.opacity = "0";
+
+    setTimeout(() => {
+      clone.style.transform = `translate(${tx - sx}px, ${ty - sy}px) scale(0.45)`;
+      clone.style.opacity = "0";
+    }, 120);
+
+    setTimeout(() => {
+      clone.remove();
+      icon.remove();
+      resolve();
+    }, 600);
+  });
+}
+
+
+/* ================================================================
+   🖱 아이콘 클릭 → Delete → Trash 이동
+================================================================ */
+function clickIconThenDelete(mouse, icon, menu) {
+  return new Promise(resolve => {
+
+    const rect = icon.getBoundingClientRect();
+    const areaRect = document.querySelector(".game-area").getBoundingClientRect();
+
+    const ix = (rect.left - areaRect.left) + rect.width * 0.4;
+    const iy = (rect.top - areaRect.top) + rect.height * 0.4;
+
+    mouse.animate(
+      [
+        { transform: mouse.style.transform },
+        { transform: `translate(${ix}px, ${iy}px)` }
+      ],
+      { duration: 950, easing: "ease-out", fill: "forwards" }
+    ).onfinish = () => {
+
+      clickSound.play();  // ← 🔥 클릭 소리
+
+      icon.style.transform = "scale(0.85)";
+      setTimeout(() => (icon.style.transform = "scale(1)"), 120);
+
+      const mx = (rect.right - areaRect.left) + 8;
+      const my = rect.top - areaRect.top;
+
+      menu.style.left = mx + "px";
+      menu.style.top = my + "px";
+      menu.style.display = "block";
+
+      const dx = mx + menu.offsetWidth * 0.5;
+      const dy = my + menu.offsetHeight * 0.5;
+
+      setTimeout(() => {
+
+        mouse.animate(
+          [
+            { transform: `translate(${ix}px, ${iy}px)` },
+            { transform: `translate(${dx}px, ${dy}px)` }
+          ],
+          { duration: 500, easing: "ease-out", fill: "forwards" }
+        ).onfinish = () => {
+
+          deleteSound.play(); // ← 🔥 Delete 선택 순간 재생!
+
+          menu.style.display = "none";
+
+          suckIntoTrash(icon).then(() => {
+            resolve();
+          });
+
+        };
+
+      }, 450);
+    };
+  });
+}
+
+
+/* ================================================================
+   🔥 메인 자동 시나리오
+================================================================ */
+async function startMultiMouseVirus() {
+
+  document.documentElement.classList.add("disable-mouse");
+  document.body.classList.add("disable-mouse");
+  crtFilter.style.opacity = "1";
+
+  const startPositions = [
+    { x: Math.random() * innerWidth, y: -120 },
+    { x: -120, y: Math.random() * innerHeight },
+    { x: innerWidth + 120, y: Math.random() * innerHeight }
+  ];
+
+  fakeMice.forEach((m, i) => {
+    m.style.display = "block";
+    m.style.opacity = "1";
+    m.style.transform = `translate(${startPositions[i].x}px, ${startPositions[i].y}px)`;
+  });
+
+  await clickIconThenDelete(fakeMice[0], trashTargets[0], menuList[0]);
+  await clickIconThenDelete(fakeMice[1], trashTargets[1], menuList[1]);
+  fakeMice[1].style.display = "none";
+
+  await clickIconThenDelete(fakeMice[2], trashTargets[2], menuList[2]);
+  fakeMice[2].style.display = "none";
+
+  const cur = getComputedStyle(fakeMice[0]).transform;
+  const r = musicTarget.getBoundingClientRect();
+  const tx = r.left + r.width * 0.4;
+  const ty = r.top + r.height * 0.4;
+
+  fakeMice[0].animate(
+    [{ transform: cur }, { transform: `translate(${tx}px, ${ty}px)` }],
+    { duration: 1000, easing: "ease-out", fill: "forwards" }
+  ).onfinish = () => {
+
+    clickSound.play();
+
+    musicTarget.style.transform = "scale(0.85)";
+    setTimeout(() => {
+      musicTarget.style.transform = "scale(1)";
+    }, 120);
+
+    fakeMice.forEach(m => {
+      m.style.opacity = "0";
+      m.style.transform = "translate(0,0)";
+      setTimeout(() => (m.style.display = "none"), 150);
+    });
+
+    setTimeout(() => {
+      wmpPopup.style.display = "block";
+      crtFilter.style.opacity = "0";
+
+      setTimeout(() => {
+        document.documentElement.classList.remove("disable-mouse");
+        document.body.classList.remove("disable-mouse");
+      }, 150);
+
+      document.getElementById("rhythmGame").style.display = "block";
+      document.getElementById("rhythmChar").style.display = "block";
+
+      subtitle.style.display = "block";
+      subtitleText.textContent = "넌 또 누구야?";
+
+      nextButton.style.display = "inline";
+
+      nextButton.onclick = () => {
+        subtitle.style.display = "none";
+        nextButton.style.display = "none";
+        nextButton.onclick = null;
+
+        startCharSpeech();
+      };
+
+    }, 300);
+  };
+}
+
+
+/* ================================================================
+   🎤 캐릭터 등장 후 대사 (타자기 효과)
+================================================================ */
+const speechBubble = document.getElementById("speechBubble");
+const speechText = document.getElementById("speechText");
+
+function speechTypeEffect(text, onComplete) {
+  speechText.textContent = "";
+  speechBubble.style.display = "block";
+
+  let i = 0;
+
+  function typing() {
+    if (i < text.length) {
+      speechText.textContent += text[i];
+
+      const s = new Audio("./리듬게임 캐릭터 소리.mp3");
+      s.volume = 0.45;
+      s.play();
+
+      i++;
+      setTimeout(typing, 70);
+    } else {
+      if (onComplete) onComplete();
+    }
+  }
+  typing();
+}
+
+const charLines = [
+  "환영해! 지금 아이콘들이 다 말썽이지?",
+  "그거 다 내가 그런거야.",
+  "만약, 리듬게임에서 너가 이긴다면, 바이러스를 풀어줄게."
+];
+
+function startCharSpeech() {
+  subtitle.style.display = "none";
+  nextButton.style.display = "none";
+
+  speechBubble.style.display = "block";
+
+  let line = 0;
+
+  function nextLine() {
+    if (line < charLines.length) {
+      speechTypeEffect(charLines[line], () => {
+        line++;
+        setTimeout(nextLine, 600);
+      });
+    } else {
+      setTimeout(() => {
+        speechBubble.style.display = "none";
+
+        subtitle.style.display = "block";
+        subtitleText.textContent = "…뭐? 리듬게임이라고?";
+        nextButton.style.display = "inline";
+
+        nextButton.onclick = () => {
+          subtitle.style.display = "none";
+          nextButton.style.display = "none";
+          nextButton.onclick = null;
+
+          startHowToPlay();
+        };
+      }, 500);
+    }
+  }
+
+  nextLine();
+}
+
+const howToLines = [
+  "말 그대로 올라오는 부호에 맞는 방향키를 입력해.",
+  "틀릴 수 있는 기회는 총 5번이야."
+];
+
+function startHowToPlay() {
+  let idx = 0;
+  speechBubble.style.display = "block";
+
+  function nextExplain() {
+    if (idx < howToLines.length) {
+      speechTypeEffect(howToLines[idx], () => {
+        idx++;
+        setTimeout(nextExplain, 600);
+      });
+    } else {
+      setTimeout(showPlayButton, 400);
+    }
+  }
+
+  nextExplain();
+}
+
+function showPlayButton() {
+
+  speechBubble.style.display = "none";
+
+  const btn = document.createElement("div");
+  btn.id = "playButton";
+  btn.textContent = "▶ ready?";
+  
+  btn.style.position = "absolute";
+  btn.style.left = "50%";
+  btn.style.top = "50%"; 
+  btn.style.transform = "translateX(-50%)";
+  btn.style.padding = "1.2vh 3vw";
+  btn.style.fontFamily = "DungGeunMo";
+  btn.style.fontSize = "2.6vh";
+
+  btn.style.color = "#ffefef";
+  btn.style.background = "#b30000";
+  btn.style.border = "3px solid #ff4d4d";
+  btn.style.cursor = "pointer";
+  btn.style.imageRendering = "pixelated";
+  btn.style.zIndex = "10006";
+  btn.style.boxShadow =
+    "inset -3px -3px 0 #660000, inset 3px 3px 0 #ff9999, 3px 3px 0 #000";
+
+  btn.onmouseenter = () => {
+    btn.style.background = "#ff1a1a";
+    btn.style.border = "3px solid #ff8080";
+  };
+  btn.onmouseleave = () => {
+    btn.style.background = "#b30000";
+    btn.style.border = "3px solid #ff4d4d";
+  };
+
+  document.querySelector(".game-area").appendChild(btn);
+
+  btn.onclick = () => {
+    console.log("🎮 리듬게임 시작!");
+    window.location.href = "noah rythmn game.html";
+  };
+}
+
+
+</script>
+
+
+</body>
+</html>
+
+
+
+
+
+
+

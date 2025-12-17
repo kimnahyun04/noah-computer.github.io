@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>Noah's Homework Virus — Puzzle Stage</title>
+
+  <style>
+    html, body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      overflow: hidden;
+      image-rendering: pixelated;
+      cursor: url('https://cur.cursors-4u.net/cursors/cur-2/cur115.cur'), auto;
+    }
+
+    /* ============================
+       🟦 16:9 고정 게임화면
+    ============================ */
+    .game-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+    }
+
+    .game-area {
+      position: relative;
+      width: calc(100vh * (16/9));
+      height: 100vh;
+
+      max-width: 100vw;
+      max-height: calc(100vw * (9/16));
+
+      overflow: hidden;
+      background: black;
+      image-rendering: pixelated;
+    }
+
+    /* ============================
+       🟧 게임 화면 (비율 고정)
+    ============================ */
+    .stage {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    .background {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      transition: filter 0.4s ease;
+      image-rendering: pixelated;
+    }
+
+    /* ============================
+       👁 눈알 (비율 유지)
+    ============================ */
+    .eye-wrapper {
+      position: absolute;
+      width: 100%;
+      top: 0%;
+      left: 0;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .eye {
+      width: 100%;
+      height: auto;
+      top: 0;
+      left: 0;
+      transition: transform 0.05s linear;
+      image-rendering: pixelated;
+    }
+
+    /* ============================
+       🎮 아이콘 (비율 유지)
+    ============================ */
+    .icon {
+      position: absolute;
+      width: 7%;
+      image-rendering: pixelated;
+      cursor: pointer;
+      z-index: 5;
+      transition: transform 0.2s ease, filter 0.2s ease;
+      filter: drop-shadow(-0.6vh -0.6vh 0 #131313);
+    }
+
+    .icon:hover {
+      transform: scale(1.1);
+      filter: drop-shadow(0 0 1.2vh rgba(255,255,255,0.9));
+    }
+
+    .internet { top: 7%; left: 6%; }
+    .mail     { top: 20%; left: 6%; }
+    .folder   { top: 33%; left: 6%; }
+    .trash    { top: 46%; left: 6%; }
+    .music-icon { top: 72%; left: 6%; }
+
+    /* ============================
+       💬 자막 (그대로 유지)
+    ============================ */
+    #subtitle {
+      position: absolute;
+      bottom: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'DungGeunMo', sans-serif;
+      color: white;
+      background: rgba(0,0,0,0.6);
+      border: 2px solid white;
+      border-radius: 10px;
+      padding: 1vh 2vw;
+      font-size: 2.2vh;
+      text-align: center;
+      z-index: 99999999;
+      display: none;
+    }
+
+    @keyframes blink {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ============================
+       📌 팝업
+    ============================ */
+    .popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: url('./파일-손상.png') no-repeat center/contain;
+  width: 52%;
+  aspect-ratio: 4 / 5;
+  image-rendering: pixelated;
+  z-index: 900;
+  display: none;
+  filter: drop-shadow(0.6vw 0.6vw 0 #000);
+}
+
+    /* ============================
+       🎁 퀘스트 박스
+    ============================ */
+    #questBox {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'DungGeunMo', monospace;
+  color: #e6e6e6;
+
+  background: repeating-linear-gradient(45deg, #0a0a0a 0 2px, #0c0c0c 2px 4px);
+  border: 0.5vw solid #ff0000;
+  outline: 0.4vw solid #660000;
+  border-radius: 0.3vw;
+
+  padding: 5vh 6vw;
+  font-size: 2.8vh;
+  text-align: center;
+
+  display: none;
+  z-index: 2000;
+
+  box-shadow:
+    0.5vw 0.5vw 0 #440000,
+    inset 0.4vw 0.4vw 0 #220000,
+    inset -0.4vw -0.4vw 0 #220000;
+}
+
+    #okBtn {
+      display: block;
+      margin: 3vh auto 0 auto;
+      background: #ff0000;
+      color: #fff;
+      border: 0.35vw solid #fff;
+      font-family: 'DungGeunMo';
+      font-size: 2.4vh;
+      padding: 1.4vh 4vw;
+      cursor: pointer;
+      image-rendering: pixelated;
+
+      box-shadow:
+        0.4vw 0.4vw 0 #550000,
+        inset 0.25vw 0.25vw 0 #220000;
+    }
+
+    #okBtn:hover {
+      transform: translate(-0.15vw, -0.15vw) scale(1.05);
+      box-shadow:
+        0.5vw 0.5vw 0 #880000,
+        inset 0.2vw 0.2vw 0 #220000;
+    }
+
+    #okBtn:active {
+      transform: translate(0.2vw, 0.2vw) scale(0.95);
+    }
+
+    /* ============================
+   🧩 퍼즐 전체 (핵심)
+============================ */
+.puzzle-board {
+  position: absolute;
+  inset: 0;                 /* game-area 기준 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4%;
+  z-index: 1001;
+  display: none;
+}
+
+/* 왼쪽 퍼즐 조각 영역 */
+.left-area {
+  width: 42%;
+  height: 78%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: flex-start;
+  gap: 1%;
+  padding: 1%;
+  background: repeating-linear-gradient(45deg, #111 0 2px, #151515 2px 4px);
+  border: 0.4vw solid #fff;
+  box-shadow: 0.4vw 0.4vw 0 #222;
+}
+
+/* 오른쪽 퍼즐 보드 */
+.right-board {
+  width: 42%;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 1%;
+  background: repeating-linear-gradient(45deg, #2a2a2a 0 2px, #222 2px 4px);
+  border: 0.4vw solid #fff;
+  box-shadow: 0.4vw 0.4vw 0 #222;
+}
+
+/* ============================
+   🧩 퍼즐 타일
+============================ */
+.tile {
+  width: 23%;
+  height: 23%;
+  background-image: url('./파일-손상-1.png');
+  background-size: 400% 400%;
+  background-repeat: no-repeat;
+  cursor: grab;
+  border: 0.2vw solid #555;
+  box-shadow: 0.2vw 0.2vw 0 #000;
+  transition: transform 0.05s;
+  image-rendering: pixelated;
+}
+.right-board .tile {
+  width: 100%;
+  height: 100%;
+}
+
+.tile:hover {
+  transform: scale(1.05);
+  border-color: #fff;
+}
+
+.empty {
+  background: none;
+  border: 0.2vw dashed rgba(255,255,255,0.2);
+}
+
+.dragging {
+  opacity: 0.5;
+  transform: scale(1.05);
+}
+
+  </style>
+</head>
+<body>
+
+<!-- ============================
+     🟦 전체 16:9 박스
+============================ -->
+<div class="game-container">
+  <div class="game-area">
+
+    <!-- ============================
+         🟧 게임 화면
+    ============================ -->
+    <div class="stage">
+
+      <img class="background" src="./노아 게임 후 망가짐.gif">
+
+      <img class="icon internet" src="./인터넷 로고.png">
+      <img class="icon mail" src="./메세지 아이콘.png">
+      <img class="icon folder" id="folderIcon" src="./폴더 아이콘.png">
+      <img class="icon trash" src="./쓰레기통.png">
+      <img class="icon music-icon" src="./음악아이콘.png">
+
+      <div class="eye-wrapper" id="eyeWrapper">
+        <img class="eye" id="eye" src="./눈알.png">
+      </div>
+
+      <div id="subtitle"></div>
+      <div class="popup" id="puzzlePopup"></div>
+
+      <div id="questBox">
+        <p>조각조각 손상된 파일의 퍼즐을 맞추세요</p>
+        <button id="okBtn">OK</button>
+      </div>
+
+    </div>
+
+    <!-- ============================
+         🧩 퍼즐 화면 (game-area 기준 고정)
+    ============================ -->
+    <div class="puzzle-board" id="puzzleContainer">
+      <div class="left-area" id="leftArea"></div>
+      <div class="right-board" id="rightBoard"></div>
+    </div>
+
+  </div>
+</div>
+<audio id="nextSound" src="./다음 클릭.mp3" preload="auto"></audio>
+<audio id="puzzlePickSound" src="./퍼즐 맞추는 소리.mp3" preload="auto"></audio>
+<audio id="puzzleCorrectSound" src="./퍼즐 맞을때.mp3" preload="auto"></audio>
+<audio id="puzzleWrongSound" src="./퍼즐 틀릴때.mp3" preload="auto"></audio>
+<audio id="autoRestoringSound" src="./자동 복구중 소리.mp3" preload="auto"></audio>
+<audio id="autoRestoreDoneSound" src="./자동 복구 완료.mp3" preload="auto"></audio>
+<audio id="bgm" src="./배경음.mp3" preload="auto" loop></audio>
+<audio id="fileErrorSound" src="./윈도우-송.mp3" preload="auto"></audio>
+
+
+
+<!-- ============================
+     ✨ JS (퍼즐 절대 수정 없음)
+============================ -->
+<script>
+/* ======================================================
+   👁 눈알 움직임 (그대로)
+====================================================== */
+const eye = document.getElementById("eye");
+const eyeWrapper = document.getElementById("eyeWrapper");
+
+function updateEyePosition(e) {
+  const rect = eyeWrapper.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = e.clientX - cx;
+  const dy = e.clientY - cy;
+
+  const maxMove = rect.width * 0.005;
+  const mx = Math.max(Math.min(dx / 20, maxMove), -maxMove);
+  const my = Math.max(Math.min(dy / 20, maxMove), -maxMove);
+
+  eye.style.transform = `translate(${mx}px, ${my}px)`;
+}
+
+window.addEventListener("mousemove", updateEyePosition);
+window.addEventListener("resize", () => eye.style.transform = "translate(0,0)");
+
+/* ======================================================
+   💬 자막 시스템
+====================================================== */
+const subtitle = document.getElementById("subtitle");
+
+function bringSubtitleToFront() {
+  document.body.appendChild(subtitle);
+  subtitle.style.zIndex = "999999999";
+}
+
+function showSubtitle(text, withNext = false) {
+  subtitle.innerHTML = withNext
+    ? `${text}<span data-btn="next" style="color:#ffcc00;margin-left:1vw;animation:blink .8s infinite alternate;cursor:pointer;">다음 ▶</span>`
+    : text;
+
+  subtitle.style.display = "block";
+  bringSubtitleToFront();
+}
+
+/* ======================================================
+   📌 변수들
+====================================================== */
+let step = 1;
+let puzzleLocked = true;
+let exampleOverlay = null;
+let fileOnly = null;
+
+const folderIcon = document.getElementById("folderIcon");
+const popup = document.getElementById("puzzlePopup");
+const puzzleContainer = document.getElementById("puzzleContainer");
+const questBox = document.getElementById("questBox");
+const okBtn = document.getElementById("okBtn");
+const leftArea = document.getElementById("leftArea");
+const rightBoard = document.getElementById("rightBoard");
+
+const nextSound = document.getElementById("nextSound");
+const fileErrorSound = document.getElementById("fileErrorSound");
+
+function playFileErrorSound() {
+  try {
+    fileErrorSound.currentTime = 0;
+    fileErrorSound.play();
+  } catch(e){}
+}
+
+
+function playNextSound() {
+  try {
+    nextSound.currentTime = 0;
+    nextSound.play();
+  } catch (e) {}
+}
+const autoRestoringSound = document.getElementById("autoRestoringSound");
+const autoRestoreDoneSound = document.getElementById("autoRestoreDoneSound");
+
+function playAutoRestoring() {
+  try {
+    autoRestoringSound.currentTime = 0;
+    autoRestoringSound.play();
+  } catch(e){}
+}
+
+function playAutoRestoreDone() {
+  try {
+    autoRestoreDoneSound.currentTime = 0;
+    autoRestoreDoneSound.play();
+  } catch(e){}
+}
+
+
+const puzzlePickSound = document.getElementById("puzzlePickSound");
+const puzzleCorrectSound = document.getElementById("puzzleCorrectSound");
+const puzzleWrongSound = document.getElementById("puzzleWrongSound");
+
+function playPuzzlePick() {
+  try {
+    puzzlePickSound.currentTime = 0;
+    puzzlePickSound.play();
+  } catch(e){}
+}
+
+function playPuzzleCorrect() {
+  try {
+    puzzleCorrectSound.currentTime = 0;
+    puzzleCorrectSound.play();
+  } catch(e){}
+}
+
+function playPuzzleWrong() {
+  try {
+    puzzleWrongSound.currentTime = 0;
+    puzzleWrongSound.play();
+  } catch(e){}
+}
+const bgm = document.getElementById("bgm");
+bgm.volume = 0.35; // 🔊 필요하면 0.2~0.5 사이로 조절
+
+
+/* ======================================================
+   🟡 인트로 자막
+====================================================== */
+window.addEventListener("load", () => {
+  setTimeout(() => showSubtitle("일단 숙제나 해야겠어...", true), 1000);
+});
+
+/* ======================================================
+   🟡 자막 NEXT 흐름
+====================================================== */
+subtitle.addEventListener("click", (e) => {
+  const btn = e.target.closest("span[data-btn]");
+  if (!btn) return;
+  playNextSound();
+  if (btn.dataset.btn !== "next") return;
+
+  if (step === 1) {
+    showSubtitle("숙제는 파일에 저장해뒀어. 파일을 열어봐야 해.", true);
+    step = 2;
+    return;
+  }
+
+  if (step === 3) {
+    showSubtitle("대체 이 컴퓨터는 정상적인게 없는거야..", true);
+    step = 4;
+    return;
+  }
+
+  if (step === 4) {
+    popup.style.display = "none";
+    showSubtitle("이게 뭐야? 퍼즐?", true);
+    puzzleContainer.style.display = "flex";
+    step = 5;
+    return;
+  }
+
+  if (step === 5) {
+    subtitle.style.display = "none";
+    questBox.style.display = "block";
+    playFileErrorSound(); // 🔊 퀘스트 박스 등장 = 윈도우 송
+    step = 6;
+    return;
+  }
+
+  if (step === 8) {
+    puzzleContainer.style.display = "none";
+
+    fileOnly = document.createElement("img");
+    fileOnly.src = "./파일-손상-1.png";
+    fileOnly.style.cssText = `
+      position:absolute;top:50%;left:50%;
+      transform:translate(-50%,-50%);
+      width:60vw;z-index:999999;
+      image-rendering:pixelated;
+      filter:drop-shadow(0.6vw 0.6vw 0 #000);
+      opacity:1;
+    `;
+    document.querySelector(".stage").appendChild(fileOnly);
+
+    showSubtitle("프랭클린 교수와 함께하는 수학...?", true);
+    step = 9;
+    return;
+  }
+
+  if (step === 9) {
+    showSubtitle("이게 과제인가..?", true);
+    step = 9.5;
+    return;
+  }
+
+  if (step === 9.5) {
+    showSubtitle(
+        "눌러보자 <span data-btn='next' style='color:#ffcc00; margin-left:1vw; animation:blink .8s infinite alternate; cursor:pointer;'>다음 ▶</span>",
+        false
+    );
+    step = 10;
+    return;
+}
+
+
+  
+if (step === 10) {
+
+    // NEXT 버튼 눌렀으니 자막 감추기
+    subtitle.style.display = "none";
+
+    // 파일 + 프랭클린 PNG 재등장
+    const fileImg = document.createElement("img");
+    fileImg.src = "./파일-손상-1.png";
+    fileImg.id = "fileAgain";
+    fileImg.style.cssText = `
+        position:absolute;
+        top:50%; left:50%;
+        transform:translate(-50%,-50%);
+        width:60vw;
+        z-index:999900;
+        image-rendering:pixelated;
+        filter:drop-shadow(0.6vw 0.6vw 0 #000);
+        pointer-events:none;
+    `;
+
+    const frankImg = document.createElement("img");
+    frankImg.src = "./프랭클린-교수.png";
+    frankImg.id = "franklinPNG";
+    frankImg.style.cssText = `
+        position:absolute;
+        top:50%; left:50%;
+        transform:translate(-50%,-50%);
+        width:60vw;
+        z-index:999999;
+        cursor:pointer;
+        pointer-events:auto;
+        image-rendering:pixelated;
+    `;
+
+    const stage = document.querySelector(".stage");
+    stage.appendChild(fileImg);
+    stage.appendChild(frankImg);
+
+    step = 11;
+    return;
+}
+
+
+  if (step === 11) {
+    window.location.href = "./noah franklin.html";
+  }
+});
+
+/* ======================================================
+   🟡 폴더 클릭
+====================================================== */
+folderIcon.addEventListener("click", () => {
+  if (step !== 2) return;
+
+  popup.style.display = "block";
+  playFileErrorSound(); // 🔊 파일 손상 효과음 (PNG 뜨는 순간)
+  setTimeout(() => showSubtitle("파일이 손상됐다고?", true), 500);
+  step = 3;
+});
+
+/* ======================================================
+   🟡 OK → 예시 이미지
+====================================================== */
+okBtn.addEventListener("click", () => {
+  playNextSound(); // 🔘 OK 버튼 = 다음 클릭 소리
+  questBox.style.display = "none";
+
+  exampleOverlay = document.createElement("div");
+  exampleOverlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,0.6);
+    display:flex;align-items:center;justify-content:center;
+    z-index:9999;opacity:0;transition:opacity .4s;
+  `;
+
+  const exampleImg = document.createElement("div");
+  exampleImg.style.cssText = `
+    width:50vw;height:50vw;
+    background:url('./파일-손상-1.png') no-repeat center/contain;
+    image-rendering:pixelated;
+  `;
+
+  exampleOverlay.appendChild(exampleImg);
+  document.body.appendChild(exampleOverlay);
+
+  requestAnimationFrame(() => exampleOverlay.style.opacity = "1");
+
+  setTimeout(() => {
+    subtitle.innerHTML =
+      `이걸 외우는게 좋을거같아` +
+      `<span data-btn="memorize" style="color:#ffcc00;margin-left:1vw;animation:blink 1s infinite alternate;cursor:pointer;">다 외웠어 ▶</span>`;
+    subtitle.style.display = "block";
+    bringSubtitleToFront();
+  }, 400);
+
+  step = 7;
+});
+
+/* ======================================================
+   ✔ '다 외웠어' → 퍼즐 시작
+====================================================== */
+subtitle.addEventListener("click", (e) => {
+  const btn = e.target.closest("span[data-btn]");
+  if (!btn || btn.dataset.btn !== "memorize" || step !== 7) return;
+
+  if (exampleOverlay) {
+    exampleOverlay.style.opacity = "0";
+    setTimeout(() => {
+      if (exampleOverlay) exampleOverlay.remove();
+      exampleOverlay = null;
+    }, 400);
+  }
+
+  showSubtitle("일단 글자 있는 부분부터 맞춰보자..", false);
+
+  puzzleLocked = false;
+  step = 7.5;
+});
+
+/* ======================================================
+   🧩 퍼즐 생성 (원본 그대로)
+====================================================== */
+const size = 4;
+const pieces = [];
+for (let y = 0; y < size; y++)
+  for (let x = 0; x < size; x++) pieces.push({ x, y });
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+shuffle([...pieces]).forEach(pos => {
+  const tile = document.createElement("div");
+  tile.className = "tile";
+  tile.draggable = true;
+  tile.dataset.x = pos.x;
+  tile.dataset.y = pos.y;
+  tile.style.backgroundImage = "url('./파일-손상-1.png')";
+  tile.style.backgroundSize = `${size * 100}% ${size * 100}%`;
+  tile.style.backgroundPosition = `${(pos.x/(size-1))*100}% ${(pos.y/(size-1))*100}%`;
+  leftArea.appendChild(tile);
+});
+
+/* 빈 슬롯 */
+function createEmpty(x, y) {
+  const d = document.createElement("div");
+  d.className = "empty";
+  d.dataset.slotX = x;
+  d.dataset.slotY = y;
+  return d;
+}
+
+for (let i = 0; i < size * size; i++)
+  rightBoard.appendChild(createEmpty(i % size, Math.floor(i / size)));
+
+document.addEventListener("pointerdown", e => {
+  if (puzzleLocked) return;
+  if (e.target.classList.contains("tile")) {
+    playPuzzlePick(); // ⚡ 누르는 순간 소리
+  }
+});
+
+/* ======================================================
+   🧩 드래그 & 드롭 (원본)
+====================================================== */
+let draggedTile = null;
+
+document.addEventListener("dragstart", e => {
+  if (puzzleLocked) { e.preventDefault(); return; }
+  if (e.target.classList.contains("tile")) {
+    draggedTile = e.target;
+    draggedTile.classList.add("dragging");
+  }
+});
+
+document.addEventListener("dragend", () => {
+  if (draggedTile) draggedTile.classList.remove("dragging");
+  draggedTile = null;
+});
+
+document.addEventListener("dragover", e => e.preventDefault());
+
+document.addEventListener("drop", e => {
+  e.preventDefault();
+  if (!draggedTile) return;
+
+  const target = e.target.closest(".empty, .tile, #leftArea");
+  if (!target) return;
+
+  const fromBoard = draggedTile.dataset.slotX !== undefined;
+
+  if (target.id === "leftArea") {
+    if (fromBoard) {
+      const empty = createEmpty(draggedTile.dataset.slotX, draggedTile.dataset.slotY);
+      draggedTile.replaceWith(empty);
+      delete draggedTile.dataset.slotX;
+      delete draggedTile.dataset.slotY;
+    }
+    leftArea.appendChild(draggedTile);
+    return;
+  }
+
+  if (target.classList.contains("empty") || target.classList.contains("tile")) {
+    const slotX = parseInt(target.dataset.slotX);
+    const slotY = parseInt(target.dataset.slotY);
+
+    const correctX = parseInt(draggedTile.dataset.x);
+    const correctY = parseInt(draggedTile.dataset.y);
+
+    if (slotX !== correctX || slotY !== correctY) {
+      showSubtitle("이 위치는 아닌거같아...", false);
+        playPuzzleWrong(); // ❌ 퍼즐 틀림 소리
+
+      if (fromBoard) {
+        const empty = createEmpty(draggedTile.dataset.slotX, draggedTile.dataset.slotY);
+        draggedTile.replaceWith(empty);
+      }
+      leftArea.appendChild(draggedTile);
+      return;
+    }
+
+    showSubtitle("맞췄다!", false);
+    playPuzzleCorrect(); // ✅ 퍼즐 맞음 소리
+
+
+    if (target.classList.contains("tile")) {
+      const displaced = target;
+      delete displaced.dataset.slotX;
+      delete displaced.dataset.slotY;
+      leftArea.appendChild(displaced);
+    }
+
+    if (fromBoard) {
+      const empty = createEmpty(draggedTile.dataset.slotX, draggedTile.dataset.slotY);
+      draggedTile.replaceWith(empty);
+    }
+
+    draggedTile.dataset.slotX = slotX;
+    draggedTile.dataset.slotY = slotY;
+    target.replaceWith(draggedTile);
+
+    const leftColFilled = [...rightBoard.children].filter(
+      s => s.dataset.slotX === "0" && s.classList.contains("tile")
+    ).length === 4;
+
+    if (leftColFilled) {
+      subtitle.style.display = "none";
+      showAutoRestoreMessage();
+      setTimeout(() => autoFillPuzzle(), 2000);
+    }
+  }
+});
+
+/* ======================================================
+   🔧 자동 복구중 메시지 + 깜빡임 복구
+====================================================== */
+function showAutoRestoreMessage() {
+  const msg = document.createElement("div");
+  msg.id = "autoRestoreMsg";
+  msg.style.cssText = `
+    position:absolute;top:50%;left:77%;
+    transform:translate(-50%,-50%);
+    font-family:'DungGeunMo';color:#ffcc00;
+    font-size:2.6vh;background:rgba(0,0,0,0.7);
+    border:0.25vw solid #ff0000;padding:1vh 2vw;
+    z-index:4000;animation:blinkText .8s infinite alternate;
+  `;
+  msg.textContent = "자동 복구중...";
+  document.querySelector(".puzzle-board").appendChild(msg);
+
+  playAutoRestoring(); // 🔊 자동 복구중 소리
+
+}
+
+/* 깜빡임 keyframe 추가 */
+const style = document.createElement("style");
+style.innerHTML = `
+@keyframes blinkText {
+  0% {opacity:1;}
+  100% {opacity:0;}
+}
+`;
+document.head.appendChild(style);
+
+/* ======================================================
+   ⭐ 자동 퍼즐 완성 + 자연스러운 합체 페이드
+====================================================== */
+function autoFillPuzzle() {
+
+  const tiles = [...rightBoard.children];
+
+  tiles.forEach(tile => {
+    tile.style.transition = "opacity .4s";
+    tile.style.opacity = "0";
+  });
+
+  setTimeout(() => {
+    rightBoard.innerHTML = "";
+
+    pieces.forEach(pos => {
+      
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.draggable = false;
+      tile.style.backgroundImage = "url('./노아-숙제-파일-1.png')";
+      tile.style.backgroundSize = `${size * 100}% ${size * 100}%`;
+      tile.style.backgroundPosition = `${(pos.x/(size-1))*100}% ${(pos.y/(size-1))*100}%`;
+      tile.style.opacity = "0";
+      tile.style.transition = "opacity .4s";
+      rightBoard.appendChild(tile);
+
+      requestAnimationFrame(() => tile.style.opacity = "1");
+    });
+
+    playAutoRestoreDone();     // ✅ 완료 사운드
+  leftArea.innerHTML = "";   // ✅ 왼쪽 퍼즐 싹 비우기
+
+    const msg = document.getElementById("autoRestoreMsg");
+    if (msg) msg.remove();
+
+    showSubtitle("성공이다..!", true);
+    step = 8;
+
+  }, 400);
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target.id === "franklinPNG") {
+    window.location.href = "./noah franklin.html";
+  }
+});
+
+window.addEventListener("load", () => {
+  bgm.currentTime = 0;
+  bgm.play().catch(() => {
+    // 자동재생 막히면 첫 입력 때 재생
+    const resumeBgm = () => {
+      bgm.play().catch(()=>{});
+      window.removeEventListener("pointerdown", resumeBgm);
+      window.removeEventListener("keydown", resumeBgm);
+    };
+    window.addEventListener("pointerdown", resumeBgm);
+    window.addEventListener("keydown", resumeBgm);
+  });
+});
+
+
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
