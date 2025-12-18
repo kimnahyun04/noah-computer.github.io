@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Start Page</title>
+  <link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.0/DungGeunMo.css" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      background-image: url(./웹디\ 플레이.gif);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: #000;
+      overflow: hidden;
+      image-rendering: pixelated;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Press Start 2P', cursive;
+      
+    }
+
+    .pixel-play-button {
+  position: absolute;
+  top: 10vh;
+  left: 40vw;
+  width: 20vw;
+  height: 8vh;
+  background: repeating-linear-gradient(
+    45deg,
+    #00ffcc,
+    #23894f 2px,
+    #246342 2px,
+    #246342 4px
+  );
+  color: #000;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 2.5vw;
+  border: 3px solid #111;
+  outline: 2px solid #195c37;
+  box-shadow:
+    0.4vw 0.4vw 0 #000,
+    0 0 0.8vw #0ff inset,
+    0 0 1.2vw rgba(0, 255, 200, 0.6);
+  text-shadow: 1px 1px 0 #fff, 2px 2px 0 #000;
+  cursor: pointer;
+  image-rendering: pixelated;
+  transition: all 0.1s ease;
+  z-index: 10;
+    }
+
+.pixel-play-button:hover {
+  background-color: #ffff00;
+  color: #ff0000;
+  box-shadow: 0.5vw 0.5vw 0 #222;
+  border-color: #cc0000;
+  text-shadow: 1px 1px 0 #000;
+}
+.sound-button {
+      position: fixed;
+      bottom: 4.5vh;
+      left: 3.5vw;
+      width: 2vw;
+      aspect-ratio: 1/1;
+      background: url('https://cdn-icons-png.flaticon.com/512/727/727240.png') no-repeat center/contain;
+      filter: drop-shadow(2px 2px 2px black);
+      cursor: pointer;
+      z-index: 1000;
+      transition: transform 0.1s ease;
+    }
+
+    .sound-button:hover {
+      transform: scale(1.05);
+    }
+    .noah-title {
+  position: absolute;
+  bottom: 10vh;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Press Start 2P', cursive;
+  font-size: 3vw;
+  color: #195c37;
+  text-shadow:
+    1px 1px 0 #ffffff,
+    2px 2px 0 #195c37,
+    3px 3px 5px #ffffff;
+  z-index: 5;
+  pointer-events: none;
+}
+
+  </style>
+</head>
+<body>
+      <div class="sound-button" id="soundBtn" title="사운드 켜기/끄기"></div>
+
+  <!-- 오디오 -->
+  <audio id="bgm" loop>
+    <source src="./사운드1.mp3" type="audio/mpeg">
+    브라우저가 오디오 태그를 지원하지 않습니다.
+  </audio>
+
+  <!-- 🎯 버튼을 클릭하면 이동 -->
+  <button class="pixel-play-button" onclick="location.href='noah computer main.html'">
+    PLAY
+  </button>
+  <div class="noah-title">Noah's Computer</div>
+
+<script>
+    const bgm = document.getElementById('bgm');
+    const soundBtn = document.getElementById('soundBtn');
+    let isPlaying = false;
+
+    soundBtn.addEventListener('click', () => {
+      if (!isPlaying) {
+        bgm.volume = 0.5;
+        bgm.play();
+        isPlaying = true;
+        soundBtn.style.filter = 'drop-shadow(2px 2px 5px lime)';
+      } else {
+        bgm.pause();
+        isPlaying = false;
+        soundBtn.style.filter = 'drop-shadow(2px 2px 2px black)';
+      }
+    });
+  </script>
+</body>
+</html>

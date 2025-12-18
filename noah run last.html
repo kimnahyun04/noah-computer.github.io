@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Noah Run</title>
+<link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.0/DungGeunMo.css" rel="stylesheet">
+
+<style>
+  html, body {
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: black;
+  }
+
+  .game-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .game-area {
+    position: relative;
+    width: calc(100vh * (16 / 9));
+    height: 100vh;
+    max-width: 100vw;
+    max-height: calc(100vw * (9 / 16));
+    overflow: hidden;
+    background: #000;
+  }
+
+  #bg-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    white-space: nowrap;
+    display: flex;
+    
+
+  }
+
+
+
+.bgSet {
+    position: relative;
+    display: block;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.bgSet img {
+    height: 100%;
+    width: auto;
+    display: block;
+    image-rendering: pixelated;
+}
+
+  .groundBlock {
+    position: absolute;
+    height: 5%;
+    background: rgba(0, 0, 255, 0.4);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .obstacle {
+    position: absolute;
+    image-rendering: pixelated;
+    z-index: 15;
+    width: auto;
+    height: auto;
+  }
+
+  .noah {
+    position: absolute;
+    bottom: 10%;
+    left: 10%;
+    width: 12%;
+    height: auto;
+    image-rendering: pixelated;
+    transform: scaleX(-1);
+    z-index: 10;
+  }
+
+  #noah-hitbox {
+    position: absolute;
+    width: 6%;
+    height: 9%;
+    background: rgba(0, 255, 0, 0.3);
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  .spark, .sparkLoop {
+    position: absolute;
+    width: auto;
+    height: auto;
+    image-rendering: pixelated;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  .sparkLoop {
+    display: none;
+  }
+
+  .fallObstacle {
+    position: absolute;
+    width: 15%;
+    height: auto;
+    z-index: 40;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+  .groundObstacle {
+    position: absolute;
+    width: 15%;
+    height: auto;
+    z-index: 40;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+.platformBlock {
+  position: absolute;
+  background: rgb(255, 0, 0); /* 완전 투명 */
+  pointer-events: none;
+  z-index: 99;
+}
+
+.bridgeBlock {
+  position: absolute;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 8;
+}
+.item {
+  
+  image-rendering: pixelated;
+
+  /* 기본 상태에서의 픽셀 테두리 */
+  filter:
+    brightness(1)
+    drop-shadow(0px 0px 0px #ffe45e)
+    drop-shadow(1px 0px 0px #ffe45e)
+    drop-shadow(-1px 0px 0px #ffe45e)
+    drop-shadow(0px 1px 0px #ffe45e)
+    drop-shadow(0px -1px 0px #ffe45e);
+}
+
+
+
+#ending-mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10%;          /* 가리개 넓이 — 필요하면 조절 가능 */
+  height: 100%;
+  pointer-events: none;
+  z-index: 999;
+  background: linear-gradient(to left, rgba(0,0,0,1), rgba(0,0,0,0));
+  display: none;       /* 평소엔 숨김 */
+}
+
+/* 다리 뿅! 등장 */
+@keyframes bridgePop {
+  0%   { transform: scale(0); filter: brightness(2); }
+  60%  { transform: scale(1.15); filter: brightness(1.4); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes fadePop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* =====================
+   다시하기 오버레이
+===================== */
+#retry-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(80, 0, 0, 0.85); /* 🔴 아주 어두운 빨강 */
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.retry-box {
+  font-family: "DungGeunMo";
+  text-align: center;
+  color: #ffd6d6;                 /* 연한 핏빛 */
+  border: 4px solid #ff4d4d;      /* 🔴 레드 테두리 */
+  padding: 4vh 6vh;
+  background: #120000;            /* 거의 검정에 가까운 레드 */
+  image-rendering: pixelated;
+}
+
+
+.retry-box p {
+  font-size: 4vh;
+  margin-bottom: 3vh;
+}
+
+.retry-box button {
+  font-family: "DungGeunMo";
+  font-size: 3vh;
+  padding: 1.2vh 4vh;
+  background: #120000;
+  color: #ffb3b3;
+  border: 3px solid #ff4d4d;
+  cursor: pointer;
+}
+
+
+.retry-box button:hover {
+  background: #ff4d4d;   /* 🔥 확 빨강 */
+  color: black;
+}
+
+
+</style>
+</head>
+<body>
+<audio id="sfx-noah-hit" src="./노아 아파하는 소리.mp3"></audio>
+<audio id="sfx-fall" src="./장애물 쿵 효과음.mp3"></audio>
+<audio id="sfx-item" src="./아이템 먹는소리.mp3"></audio>
+<audio id="sfx-bridge" src="./다리 뿅.mp3"></audio>
+<audio id="sfx-paper" src="./종이 갈기.mp3" loop></audio>
+<audio id="sfx-electric" src="./전기 장애물 소리.mp3"></audio>
+<audio id="sfx-blue" src="./블루 장애물 1소리.mp3"></audio>
+<audio id="sfx-blue5" src="./블루 장애물 2소리.mp3" loop></audio>
+<audio id="sfx-windows" src="./윈도우-송.mp3"></audio>
+
+
+<audio id="bgm" src="./노아 달리기 음악.mp3" loop></audio>
+<div class="game-container">
+  <div class="game-area" id="game-area">
+    <div id="bg-track"></div>
+
+    <img src="./노아 달림.gif" class="noah" id="noah">
+    <div id="ending-mask"></div>
+
+    <div id="noah-hitbox"></div>
+    <!-- =====================
+   다시하기 오버레이
+===================== -->
+<div id="retry-overlay">
+  <div class="retry-box">
+    <p>다시 하겠습니까?</p>
+    <button id="retry-btn">RETRY</button>
+  </div>
+</div>
+
+  </div>
+</div>
+
+<script>
+
+const DEBUG_MODE = 0;
+
+const bgm = document.getElementById("bgm");
+
+function tryPlayBGM() {
+  bgm.volume = 0.6;
+  const playPromise = bgm.play();
+  if (playPromise !== undefined) {
+    playPromise.catch(() => {
+      console.log("▶️ 자동재생 실패 → 키 입력 시 재생 예정");
+    });
+  }
+}
+
+tryPlayBGM();
+
+window.addEventListener("keydown", () => {
+  unlockAllAudio();   // ⭐ 이 줄이 핵심
+  if (bgm.paused) bgm.play();
+}, { once: true });
+
+
+const sfxFall = document.getElementById("sfx-fall");
+
+function playFallSFX() {
+  sfxFall.currentTime = 0; 
+  sfxFall.play().catch(() => {});
+}
+const sfxItem = document.getElementById("sfx-item");
+
+function playItemSFX() {
+  const now = performance.now();
+
+  // ⭐ 0.1초 안에 또 울리려 하면 무시
+  if (now - lastItemSoundTime < 100) return;
+
+  lastItemSoundTime = now;
+
+  const sound = sfxItem.cloneNode();
+  sound.volume = 0.6;   // 🔉 소리 자체도 살짝 낮춤
+  sound.play().catch(() => {});
+}
+
+const sfxBridge = document.getElementById("sfx-bridge");
+const sfxPaper = document.getElementById("sfx-paper");
+const sfxElectric = document.getElementById("sfx-electric");
+const sfxBlue = document.getElementById("sfx-blue");
+const sfxBlue5 = document.getElementById("sfx-blue5");
+const sfxWindows = document.getElementById("sfx-windows");
+
+let stage5BluePlaying = false;
+let stage6BlueStopScheduled = false;
+
+
+let electricCount0 = 0; // 3번 배경 0회
+let electricCount1 = 0; // 3번 배경 1회
+
+let blueCount0 = 0; // 4번 배경 0회
+let blueCount1 = 0; // 4번 배경 1회
+
+function playElectricSFX() {
+  const sound = sfxElectric.cloneNode();
+  sound.volume = 0.6;
+  sound.play().catch(() => {});
+}
+
+function playBlueSFX() {
+  const sound = sfxBlue.cloneNode();
+  sound.volume = 0.6;
+  sound.play().catch(() => {});
+}
+
+function playWindowsPopupSFX() {
+  const sound = sfxWindows.cloneNode();
+  sound.volume = 0.5;
+  sound.play().catch(() => {});
+}
+
+
+function playBridgeSFX() {
+  const sound = sfxBridge.cloneNode(); // ⭐ 뿅!도 겹쳐도 OK
+  sound.volume = 0.7;
+  sound.play().catch(() => {});
+}
+
+
+const sfxNoahHit = document.getElementById("sfx-noah-hit");
+
+function playNoahHitSFX() {
+  sfxNoahHit.currentTime = 0;
+  sfxNoahHit.play().catch(() => {});
+}
+
+
+const bgImages = [
+  { num: 1, src: "./노아 달리기 1.png" },
+  { num: 2, src: "./노아 달리기 2.png" },
+  { num: 3, src: "./노아 달리기 3.png" },
+  { num: 4, src: "./노아 달리기 4.png" },
+  { num: 5, src: "./노아 달리기 5.png" },
+  { num: 6, src: "./노아 달리기 마지막.png" }
+];
+
+const groundBlocksInfo = {
+  1: [
+    { left:"0%", bottom:"13%", width:"100%" }
+  ],
+  2: [
+    { left:"0%", bottom:"13%", width:"21%" },
+    { left:"40%", bottom:"13%", width:"26%" },
+    { left:"79.5%", bottom:"13%", width:"30%" }
+  ],
+  3: [
+    { left:"0%", bottom:"13%", width:"24.6%" },
+    { left:"59%", bottom:"13%", width:"45%" }
+  ],
+  4: [
+    { left:"0%", bottom:"13%", width:"24.6%" },
+    { left:"44%", bottom:"13%", width:"20%" },
+    { left:"81.3%", bottom:"13%", width:"20%" }
+  ],
+  5: [
+    { left:"0%", bottom:"13%", width:"24.6%" },
+    { left:"44%", bottom:"13%", width:"20%" },
+    { left:"81.3%", bottom:"13%", width:"20%" }
+  ],
+  6: [
+    { left:"0%", bottom:"13%", width:"100%" }
+  ],
+};
+
+const obstacleInfo = {
+  1: [],
+  2: [
+    { left: "20%", bottom: "-1%", width: "11%", height:"20%" },
+    { left: "30%", bottom: "-1%", width: "11%", height:"20%" },
+    { left: "65.2%", bottom: "-1%", width: "15%", height:"25%" }
+  ],
+  3: [],
+  4: [],
+  5: [],
+  6: []
+};
+
+const lightningInfo = {
+  2: [],
+  3: [
+    { left: "24%", bottom: "0%", width: "20%", height:"55%" },
+    { left: "40%", bottom: "0%", width: "20%", height:"55%" }
+  ]
+};
+
+const fallObstacleInfo = {
+  1: [
+    { left:"20%", startTop:"-70%", landBottom:"-14%", delay: 2000 }
+  ],
+  2: [],
+  3: [],
+  4: [],
+  5: [],
+  6: [{ left:"0%",  startTop:"-70%", landBottom:"0%", delay:  300 }
+    ]
+};
+const bridgeInfo = {
+  2: [
+    { left:"27.5%", bottom:"4%", width:"50%", height:"60%" }
+  ]
+};
+const platformInfo = {
+  2: [
+    { left:"38.5%", bottom:"31.6%", width:"28%", height:"5%" } // 충돌 박스
+  ]
+};
+/* ==========================================
+   ⭐ 블루스크린 위치/크기 설정 (직접 조절하는 부분)
+========================================== */
+const blueScreens = [
+  { left: "-10%", top: "1%", width: "50%", height: "70%" },
+  { left: "0%", top: "10%", width: "50%", height: "70%" },
+  { left: "10%", top: "1%", width: "50%", height: "70%" },
+  { left: "20%", top: "10%",  width: "50%", height: "70%" },
+  { left: "30%", top: "1%",  width: "50%", height: "70%" },
+  { left: "40%", top: "10%", width: "50%", height: "70%" },
+  { left: "50%", top: "1%", width: "50%", height: "70%" },
+  { left: "60%", top: "10%", width: "50%", height: "70%" },
+  { left: "70%", top: "1%", width: "50%", height: "70%" },
+  { left: "80%", top: "10%", width: "50%", height: "70%" }
+];
+const blueScreens5 = [
+  { left: "-10%", top: "1%", width: "50%", height: "70%" },
+  { left: "0%", top: "10%", width: "50%", height: "70%" },
+  { left: "10%", top: "1%", width: "50%", height: "70%" },
+  { left: "20%", top: "10%",  width: "50%", height: "70%" },
+  { left: "30%", top: "1%",  width: "50%", height: "70%" },
+  { left: "40%", top: "10%", width: "50%", height: "70%" },
+  { left: "50%", top: "1%", width: "50%", height: "70%" },
+  { left: "60%", top: "10%", width: "50%", height: "70%" },
+  { left: "70%", top: "1%", width: "50%", height: "70%" },
+  { left: "80%", top: "10%", width: "50%", height: "70%" }
+];
+
+const stage4BlueObstacle = [
+  { left: "24%", bottom: "0%", width: "20%", height: "40%" },
+  { left: "63.5%", bottom: "0%", width: "18%", height: "36%" }
+];
+
+const stage5BlueObstacle = [
+  { left: "24.5%", bottom: "0%", width: "20%", height: "40%" },
+  { left: "63.5%", bottom: "0%", width: "18%", height: "36%" },
+];
+
+const itemInfo = {
+  1: [
+    { type: 1, left: "0%", bottom: "20%" },
+    { type: 1, left: "5%", bottom: "20%" },
+    { type: 1, left: "10%", bottom: "20%" },
+    { type: 1, left: "15%", bottom: "20%" },
+    { type: 1, left: "20%", bottom: "20%" },
+    { type: 1, left: "25%", bottom: "20%" },
+    { type: 1, left: "30%", bottom: "20%" },
+    { type: 1, left: "35%", bottom: "20%" },
+    { type: 1, left: "40%", bottom: "20%" },
+    { type: 1, left: "45%", bottom: "20%" },
+    { type: 1, left: "50%", bottom: "20%" },
+    { type: 1, left: "55%", bottom: "20%" },
+    { type: 1, left: "60%", bottom: "20%" },
+    { type: 1, left: "65%", bottom: "20%" },
+    { type: 1, left: "70%", bottom: "20%" },
+    { type: 1, left: "75%", bottom: "20%" },
+    { type: 1, left: "80%", bottom: "20%" },
+    { type: 1, left: "85%", bottom: "20%" },
+    { type: 1, left: "90%", bottom: "20%" },
+    { type: 1, left: "95%", bottom: "20%" },
+  ],
+  2: [
+    { type: 2, left: "0%", bottom: "20%" },
+    { type: 2, left: "5%", bottom: "20%" },
+    { type: 2, left: "10%", bottom: "20%" },
+    { type: 2, left: "15%", bottom: "20%" },
+    { type: 2, left: "20%", bottom: "25%" },
+    { type: 2, left: "25%", bottom: "30%" },
+    { type: 2, left: "30%", bottom: "35%" },
+    { type: 2, left: "35%", bottom: "40%" },
+    { type: 2, left: "40%", bottom: "40%" },
+    { type: 2, left: "45%", bottom: "40%" },
+    { type: 2, left: "50%", bottom: "40%" },
+    { type: 2, left: "55%", bottom: "40%" },
+    { type: 2, left: "60%", bottom: "40%" },
+    { type: 2, left: "65%", bottom: "40%" },
+    { type: 2, left: "70%", bottom: "35%" },
+    { type: 2, left: "75%", bottom: "30%" },
+    { type: 2, left: "80%", bottom: "25%" },
+    { type: 2, left: "85%", bottom: "20%" },
+    { type: 2, left: "90%", bottom: "20%" },
+    { type: 2, left: "95%", bottom: "20%" },
+
+    
+  ],
+  3: [{ type: 3, left: "0%", bottom: "20%" },
+    { type: 3, left: "5%", bottom: "20%" },
+    { type: 3, left: "10%", bottom: "20%" },
+    { type: 3, left: "15%", bottom: "20%" },
+    
+    { type: 3, left: "25%", bottom: "55%" },
+    { type: 3, left: "30%", bottom: "55%" },
+    { type: 3, left: "35%", bottom: "55%" },
+    { type: 3, left: "40%", bottom: "55%" },
+    { type: 3, left: "45%", bottom: "55%" },
+    { type: 3, left: "50%", bottom: "55%" },
+    
+    { type: 3, left: "60%", bottom: "20%" },
+    { type: 3, left: "65%", bottom: "20%" },
+    { type: 3, left: "70%", bottom: "20%" },
+    { type: 3, left: "75%", bottom: "20%" },
+    { type: 3, left: "80%", bottom: "20%" },
+    { type: 3, left: "85%", bottom: "20%" },
+    { type: 3, left: "90%", bottom: "20%" },
+    { type: 3, left: "95%", bottom: "20%" },],
+
+  4: [{ type: 4, left: "0%", bottom: "20%" },
+    { type: 4, left: "5%", bottom: "20%" },
+    { type: 4, left: "10%", bottom: "20%" },
+    { type: 4, left: "15%", bottom: "20%" },
+    { type: 4, left: "20%", bottom: "20%" },
+    
+    { type: 4, left: "44%", bottom: "20%" },
+    { type: 4, left: "49%", bottom: "20%" },
+    { type: 4, left: "54%", bottom: "20%" },
+    { type: 4, left: "59%", bottom: "20%" },
+    
+    { type: 4, left: "80%", bottom: "20%" },
+    { type: 4, left: "85%", bottom: "20%" },
+    { type: 4, left: "90%", bottom: "20%" },
+    { type: 4, left: "95%", bottom: "20%" },],
+
+  5: [{ type: 4, left: "0%", bottom: "20%" },
+    { type: 4, left: "5%", bottom: "20%" },
+    { type: 4, left: "10%", bottom: "20%" },
+    { type: 4, left: "15%", bottom: "20%" },
+    { type: 4, left: "20%", bottom: "20%" },
+    
+    { type: 4, left: "44%", bottom: "20%" },
+    { type: 4, left: "49%", bottom: "20%" },
+    { type: 4, left: "54%", bottom: "20%" },
+    { type: 4, left: "59%", bottom: "20%" },
+    
+    { type: 4, left: "80%", bottom: "20%" },
+    { type: 4, left: "85%", bottom: "20%" },
+    { type: 4, left: "90%", bottom: "20%" },
+    { type: 4, left: "95%", bottom: "20%" },],
+  6: []
+};
+
+const itemImages = {
+  1: "./달리기 아이템 1.png",
+  2: "./달리기 아이템 2.png",
+  3: "./달리기 아이템 3.png",
+  4: "./달리기 아이템 4.png"
+};
+
+/* =====================================
+   3) 아이템 점수 (원하면 나중에 수정)
+===================================== */
+const itemScore = {
+  1: 50,
+  2: 100,
+  3: 150,
+  4: 200
+};
+const gameArea = document.getElementById("game-area");
+const bgTrack = document.getElementById("bg-track");
+
+
+
+/* ==========================================================
+   ⭐ 데미지 함수 (반드시 gameLoop 위에 있어야 함)
+========================================================== */
+function handleFallingObstacleHit() {
+  playNoahHitSFX();  // 🔥 노아 비명 추가!
+
+  // 1) 배경 + 게임 전체 정지(JS 기준)
+  isPaused = true;
+
+  // 2) 노아 데미지 GIF
+  noah.src = "./노아 달리다가 아픔.gif";
+
+  resetNoahToGround();
+
+  // 3) 깜빡임 (피격 연출)
+  let blinkCount = 0;
+  const blink = setInterval(() => {
+    noah.style.visibility =
+      noah.style.visibility === "hidden" ? "visible" : "hidden";
+    blinkCount++;
+    if (blinkCount > 10) {
+      clearInterval(blink);
+      noah.style.visibility = "visible";
+    }
+  }, 80);
+
+  // 4) 1초 뒤 게임 재개
+  setTimeout(() => {
+    // 노아 다시 달리는 상태
+    noah.src = "./노아 달림.gif";
+
+    // 배경 다시 움직임
+    isPaused = false;
+
+  }, 1000);
+}
+
+
+function resetNoahToGround() {
+  const grounds = document.querySelectorAll(".groundBlock");
+  const hb = hitbox.getBoundingClientRect();
+  let highest = -9999;
+
+  for (let g of grounds) {
+    const r = g.getBoundingClientRect();
+    if (hb.right > r.left && hb.left < r.right) {
+      if (r.top > highest) highest = r.top;
+    }
+  }
+
+  if (highest > -9999) {
+    const groundTopVH = (window.innerHeight - highest) / window.innerHeight * 100;
+    y = groundTopVH - 10;
+    vy = 0;
+    onGround = true;
+    noah.style.bottom = (groundTopVH - 10) + "%";
+  }
+}
+
+
+/* ==========================================================
+      떨어지는 장애물 스폰 함수 (ADDSET보다 위에 있어야 함)
+========================================================== */
+
+function spawnFallingObstacle(info, parentSet, stageNum) {
+  const obs = document.createElement("img");
+  if (stageNum === 6) {
+    obs.src = "./달리기 보스 쿵.gif";  // ← 나현이 준 이미지
+} else {
+    obs.src = "./장애물 쿵.gif";
+}
+
+  obs.className = "fallObstacle";
+ 
+ let dropLeft;
+
+// ⭐ 6번 배경: 노아 바로 뒤에서 떨어지기
+if (stageNum === 6) {
+    dropLeft = (noahX - 15) + "%";
+}
+
+// ⭐ 1번 배경: 노아 기준 25% 앞에서 떨어지기
+else if (stageNum === 1) {
+    dropLeft = (noahX + 25) + "%";
+}
+
+// ⭐ 나머지 배경: info.left 그대로 사용
+else {
+    dropLeft = info.left;
+}
+
+obs.style.left = dropLeft;
+
+
+  obs.style.top = info.startTop;
+  parentSet.appendChild(obs);
+if (stageNum === 6) {
+    const balloon = document.createElement("div");
+    balloon.innerText = "catch me !";
+
+    // 화면 전체 기준 위치 (%)
+    const balloonLeft = noahX + 3;   // 노아 위치 기준 옆으로 살짝
+    const balloonTop  = 35;          // 화면 35% 높이
+
+    balloon.style.position = "absolute";
+    balloon.style.left = balloonLeft + "%";
+    balloon.style.top = balloonTop + "%";
+
+    balloon.style.fontFamily = "DungGeunMo";
+    balloon.style.color = "#ffffff";
+    balloon.style.fontSize = "3vh";
+    balloon.style.padding = "0.8vh 1.2vh";
+    balloon.style.background = "rgba(0,0,0,0.8)";
+    balloon.style.border = "0.3vh solid white";
+    balloon.style.borderRadius = "1vh";
+    balloon.style.imageRendering = "pixelated";
+    balloon.style.pointerEvents = "none";
+    balloon.style.zIndex = "9999";
+
+    balloon.style.animation = "fadePop 1.2s ease-out forwards";
+
+    // ⭐ 반드시 gameArea에 붙여야 화면에 무조건 보임
+    document.getElementById("game-area").appendChild(balloon);
+
+    setTimeout(() => balloon.remove(), 1400);
+}
+
+
+  let fallSpeed = 0;
+  let gravity = 0.1;
+
+  function fall() {
+    fallSpeed += gravity;
+
+    let currentTop = parseFloat(obs.style.top);
+    const land = parseFloat(info.landBottom);
+
+    obs.style.top = (currentTop + fallSpeed) + "%";
+
+    if (currentTop + fallSpeed >= land) {
+      playFallSFX();
+      obs.style.top = land + "%";
+      obs.classList.remove("fallObstacle");
+      obs.classList.add("groundObstacle");
+
+      if (stageNum === 6) screenShake();
+      return;
+    }
+
+    requestAnimationFrame(fall);
+  }
+
+  fall();
+}
+
+
+
+
+
+/* ==========================================================
+      ⭐⭐⭐ bgSet 생성 (ground / 장애물 / 번개 / 쿵 장애물)
+========================================================== */
+
+function addSet() {
+  bgImages.forEach((bg, idx) => {
+    if (DEBUG_MODE !== 0 && idx !== (DEBUG_MODE - 1)) return;
+
+    for (let i = 0; i < 2; i++) {
+       const isFirstSet = (i === 0);
+      const bgSet = document.createElement("div");
+      bgSet.className = "bgSet";
+      
+      if (bg.num === 6 && i === 0) bgSet.id = "stage6";          // 첫 반복
+      if (bg.num === 6 && i === 1) bgSet.id = "stage6-repeat";   // 두 번째 반복
+
+// ⭐ 엔딩 시작: 오른쪽 그라데이션 가리개 표시
+document.getElementById("ending-mask").style.display = "block";
+
+
+
+      const img = document.createElement("img");
+      img.src = bg.src;
+      bgSet.appendChild(img);
+// ⭐ 2번 배경 트리거 (첫 번째 세트만)
+if (bg.num === 2 && i === 0) bgSet.id = "stage2-trigger";
+
+// 3번 배경이 화면에 등장하는 i=0에 ID 부여
+if (bg.num === 3 && i === 0) bgSet.id = "stage3-trigger-1";
+if (bg.num === 3 && i === 1) bgSet.id = "stage3-trigger-2";
+
+// addSet() 안
+if (bg.num === 4 && i === 0) bgSet.id = "stage4-trigger";
+if (bg.num === 4 && i === 1) bgSet.id = "stage4-trigger-repeat";
+
+
+// addSet() 안
+if (bg.num === 5 && i === 0) bgSet.id = "stage5-trigger";
+
+
+// 4번 / 5번 배경의 "화면에 보이는 세트"에 ID 붙이기
+// 4번 / 5번 배경이 처음 화면에 등장하는 i=0 에 ID 부여
+if (bg.num === 4 && i === 0) bgSet.id = "stage4-trigger";
+if (bg.num === 5 && i === 0) bgSet.id = "stage5-trigger";
+
+
+      /* ground */
+      if (groundBlocksInfo[bg.num]) {
+        groundBlocksInfo[bg.num].forEach(g => {
+          const gb = document.createElement("div");
+          gb.className = "groundBlock";
+          gb.style.left = g.left;
+          gb.style.bottom = g.bottom;
+          gb.style.width = g.width;
+          bgSet.appendChild(gb);
+        });
+      }
+
+      /* 기본 장애물 */
+      if (obstacleInfo[bg.num]) {
+        obstacleInfo[bg.num].forEach(o => {
+          const ob = document.createElement("img");
+          ob.src = "./달리기 장애물.gif";
+          ob.className = "obstacle";
+          ob.style.left = o.left;
+          ob.style.bottom = o.bottom;
+          ob.style.width = o.width;
+          if (o.height) ob.style.height = o.height;
+          bgSet.appendChild(ob);
+        });
+      }
+
+      /* 번개 */
+if (lightningInfo[bg.num]) {
+  lightningInfo[bg.num].forEach(l => {
+
+    const spark = document.createElement("img");
+    spark.src = "./달리기 장애물 번개.gif";
+    spark.className = "spark";
+    spark.style.left = l.left;
+    spark.style.bottom = l.bottom;
+    if (l.width) spark.style.width = l.width;
+    if (l.height) spark.style.height = l.height;
+    bgSet.appendChild(spark);
+
+    const sparkLoop = document.createElement("img");
+    sparkLoop.src = "./달리기 장애물 번개 2.gif";
+    sparkLoop.className = "sparkLoop";
+    sparkLoop.style.left = l.left;
+    sparkLoop.style.bottom = l.bottom;
+    if (l.width) sparkLoop.style.width = l.width;
+    if (l.height) sparkLoop.style.height = l.height;
+
+    sparkLoop.style.display = "none";   // ⭐ 처음엔 숨김!
+
+    bgSet.appendChild(sparkLoop);
+
+  });
+}
+
+    /* 다리(bridge) */
+if (bridgeInfo[bg.num]) {
+  bridgeInfo[bg.num].forEach(b => {
+    const br = document.createElement("div");
+    br.className = "bridgeBlock";
+    br.style.left = b.left;
+    br.style.bottom = b.bottom;
+    br.style.width = b.width;
+    br.style.height = b.height;
+    br.style.backgroundImage = "url('./노아 달리기 다리.png')";
+    br.style.backgroundSize = "100% 100%";
+    br.style.imageRendering = "pixelated";
+    br.style.position = "absolute";
+    br.style.zIndex = "8";
+    bgSet.appendChild(br);
+  });
+}
+if (platformInfo[bg.num]) {
+  platformInfo[bg.num].forEach(p => {
+    const pf = document.createElement("div");
+    pf.className = "platformBlock";
+    pf.style.left = p.left;
+    pf.style.bottom = p.bottom;
+    pf.style.width = p.width;
+    pf.style.height = p.height;
+    pf.style.position = "absolute";
+    pf.style.zIndex = "99";
+
+    // 확인용 색 — 나중에 투명으로 바꾸면 됨
+    pf.style.background = "rgba(255,0,0,0.4)";
+
+    bgSet.appendChild(pf);
+  });
+}
+/* ⭐ 4번 배경 블루스크린 장애물 */
+if (bg.num === 4) {
+  stage4BlueObstacle.forEach(o => {
+    const ob = document.createElement("img");
+    ob.src = "./블루 장애물.gif";   // 4번 전용 이미지
+    ob.className = "obstacle-stage4";
+
+    ob.style.position = "absolute";
+    ob.style.left = o.left;
+    ob.style.bottom = o.bottom;
+    ob.style.width = o.width;
+    ob.style.height = o.height;
+    
+    ob.style.imageRendering = "pixelated";
+
+    bgSet.appendChild(ob);
+  });
+}
+/* ⭐ 5번 배경 블루스크린 장애물 */
+if (bg.num === 5) {
+  stage5BlueObstacle.forEach(o => {
+    const ob = document.createElement("img");
+    ob.src = "./블루 장애물 2.gif";  // 5번 전용 이미지
+    ob.className = "obstacle-stage5";
+
+    ob.style.position = "absolute";
+    ob.style.left = o.left;
+    ob.style.bottom = o.bottom;
+    ob.style.width = o.width;
+    ob.style.height = o.height;
+    
+    ob.style.imageRendering = "pixelated";
+
+    bgSet.appendChild(ob);
+  });
+}
+
+/* ====== 아이템 생성 ====== */
+if (itemInfo[bg.num]) {
+  itemInfo[bg.num].forEach(it => {
+    const item = document.createElement("img");
+    item.className = "item";
+    item.dataset.type = it.type;
+    item.src = itemImages[it.type];
+
+    item.style.left = it.left;
+    item.style.bottom = it.bottom;
+    item.style.width = "5%";
+    item.style.height = "10%";
+    item.style.position = "absolute";
+    item.style.zIndex = "20";
+    item.style.imageRendering = "pixelated";
+
+    bgSet.appendChild(item);
+  });
+}
+
+
+ /* 떨어지는 장애물 */
+// ⭐ 6번 배경: i === 0, 1 에서만 허용, i === 2 는 금지
+/* ⭐ 떨어지는 장애물 생성 로직 (최종 완성 버전) */
+
+
+// ⭐ 1~5번 배경만 자동 생성
+if (bg.num >= 1 && bg.num <= 5 && fallObstacleInfo[bg.num]) {
+    fallObstacleInfo[bg.num].forEach(f => {
+        setTimeout(() => {
+            spawnFallingObstacle(f, bgSet, bg.num);
+        }, f.delay || 0);
+    });
+}
+
+
+
+
+      bgTrack.appendChild(bgSet);
+    }
+  });
+}
+
+addSet();
+function fadeOutPaperSound(duration = 800) {
+  const startVolume = sfxPaper.volume;
+  const startTime = performance.now();
+
+  function fade(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    sfxPaper.volume = startVolume * (1 - progress);
+
+    if (progress < 1) {
+      requestAnimationFrame(fade);
+    } else {
+      sfxPaper.pause();
+      sfxPaper.currentTime = 0;
+      sfxPaper.volume = startVolume; // 다음 재생 대비 복구
+    }
+  }
+
+  requestAnimationFrame(fade);
+}
+
+function checkStage2PaperSound() {
+  if (!audioUnlocked) return;
+
+  const stage2 = document.getElementById("stage2-trigger");
+  const stage3 = document.getElementById("stage3-trigger-1"); // ⭐ 3번 배경 0회
+  if (!stage2) return;
+
+  const r2 = stage2.getBoundingClientRect();
+
+  // ▶️ 시작: 2번 배경이 화면에 들어오면 (기존 유지)
+  if (r2.left < window.innerWidth && !stage2PaperPlaying) {
+    stage2PaperPlaying = true;
+    sfxPaper.currentTime = 0;
+    sfxPaper.volume = 0.4;
+    sfxPaper.play().catch(() => {});
+  }
+
+  // 🔇 종료: 3번 배경이 "조금 진행된 뒤"
+  if (stage3 && stage2PaperPlaying) {
+    const r3 = stage3.getBoundingClientRect();
+
+    // ⭐ 3번 배경이 화면의 30% 지점까지 들어오면
+    if (r3.left < window.innerWidth * 0.3) {
+      stage2PaperPlaying = false;
+      fadeOutPaperSound(900); // ⭐ 자연스럽게 줄어들며 종료
+    }
+  }
+}
+
+
+function unlockAllAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+
+  // ❌ bgm 제거!
+  [sfxPaper].forEach(audio => {
+    audio.volume = 0;
+    audio.play().then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = 1;
+    }).catch(() => {});
+  });
+}
+
+/* ==========================
+   ⭐ 엔딩 자동 달리기 함수
+========================== */
+function triggerFinalRun() {
+    isPaused = true;
+    finalRun = true;
+
+    noah.style.transform = "scaleX(-1)";
+    setNoahAction("run");
+
+    noahX = (noah.offsetLeft / gameArea.offsetWidth) * 100;
+}
+ /* ===================================================================
+   Noah 동작
+=================================================================== */
+
+let currentAction = "run";
+const runGIF = "./노아 달림.gif";
+const jumpGIF = "./노아 달림 점프.gif";
+const slideGIF = "./노아 달림 슬라이드.gif";
+
+function setNoahAction(action) {
+  if (currentAction === action) return;
+  currentAction = action;
+
+  // 🔹 GIF 변경
+  if (action === "run")  noah.src = runGIF;
+  if (action === "jump") noah.src = jumpGIF;
+  if (action === "slide") noah.src = slideGIF;
+
+  // 🔹 슬라이드 = 키 낮추기
+  if (action === "slide") {
+    hitbox.style.height = "6%";      // 반쯤 낮아짐
+    hitbox.style.bottom = (10 + y) + "%";
+  } 
+  // 🔹 점프/달리기 = 원래 키 복구
+  else {
+    hitbox.style.height = "9%";        // 원래 높이
+    hitbox.style.bottom = (10 + y) + "%";
+  }
+
+  noah.style.transform = "scaleX(-1)";
+}
+
+const noah = document.getElementById("noah");
+const hitbox = document.getElementById("noah-hitbox");
+
+let isPaused = false;
+let y = 20;
+let vy = 0;
+let onGround = true;
+let isDead = false;
+let finalRun = false;   // 엔딩 자동 달리기 모드 여부
+let noahX = 10;    
+let stage3Spawn0 = false; // i=0 반복용
+let stage3Spawn1 = false; // i=1 반복용
+let stage6Fall0 = false; // 6번 i=0 쿵 떨어짐 여부
+let stage6Fall1 = false; // 6번 i=1 쿵 떨어짐 여부
+let disableTriggersUntil = 0;
+let lastItemSoundTime = 0;
+let stage2PaperPlaying = false; // ⭐ 2번 배경 종이갈기 사운드 상태
+let audioUnlocked = false;
+
+
+
+window.addEventListener("keydown", (e) => {
+  if (isDead) return;
+  if (e.code === "Space" && onGround) {
+    vy = 1.4;
+    onGround = false;
+    setNoahAction("jump");
+  }
+  if (e.code === "ArrowDown") setNoahAction("slide");
+});
+
+window.addEventListener("keyup", (e) => {
+  if (isDead) return;
+  if (e.code === "ArrowDown" && currentAction === "slide") {
+    setNoahAction("run");
+  }
+});
+
+let bgX = 0;
+let bgSpeed = window.innerWidth * 0.004;
+
+function moveBackground() {
+  bgSpeed = window.innerWidth * 0.004;  // 매 프레임 자동 보정
+  bgX -= bgSpeed;
+  bgTrack.style.transform = `translateX(${bgX}px)`;
+
+  checkStage6Exit();
+}
+
+
+function checkStage6Exit() {
+  const s6 = document.getElementById("stage6");
+  if (!s6) return;
+
+  const rect = s6.getBoundingClientRect();
+
+  if (rect.right <= 0) {
+    triggerFinalRun();
+}
+
+}
+
+// =====================================================
+//   🔥 디버그용 정지(P) / 재생(R) 핫키 
+// =====================================================
+window.addEventListener("keydown", (e) => {
+  if (e.code === "KeyP") {
+    isPaused = true;
+  }
+  if (e.code === "KeyR") {
+    isPaused = false;
+  }
+});
+
+function spawnBlueScreen(parentSet, info, imgPath) {
+  const img = document.createElement("img");
+  img.src = imgPath;  // ← 이미지 경로를 외부에서 넣을 수 있게 변경!
+
+  img.className = "blue-screen-popup";
+  img.style.position = "absolute";
+  img.style.pointerEvents = "none";
+  img.style.imageRendering = "pixelated";
+  img.style.zIndex = "9";
+  img.style.zIndex = "99";
+  img.style.left   = info.left;
+  img.style.top    = info.top;
+  img.style.width  = info.width;
+  img.style.height = info.height;
+
+  parentSet.appendChild(img);
+  
+  playWindowsPopupSFX();
+
+  setTimeout(() => img.remove(), 3500);
+}
+
+let stage4Started = false;
+let stage5Started = false;
+
+function checkBlueScreen() {
+    const t4 = document.getElementById("stage4-trigger");
+    const t5 = document.getElementById("stage5-trigger");
+
+    if (t4 && !stage4Started) {
+  const r = t4.getBoundingClientRect();
+
+  if (r.left < window.innerWidth * 0.20 && r.right > window.innerWidth * 0.20) {
+    stage4Started = true;
+
+    // 🔊 블루 장애물 소리 (0회 / 1회 각각 2번)
+    if (t4.id === "stage4-trigger") {
+      if (blueCount0 < 2) {
+        playBlueSFX();
+        blueCount0++;
+      }
+    }
+
+    if (t4.id === "stage4-trigger-repeat") {
+      if (blueCount1 < 2) {
+        playBlueSFX();
+        blueCount1++;
+      }
+    }
+
+    blueScreens.forEach((bs, index) => {
+      setTimeout(() => {
+        spawnBlueScreen(gameArea, bs, "./노아 달리기 블루스크린.png");
+      }, index * 120);
+    });
+  }
+}
+
+
+    if (t5 && !stage5Started) {
+        const r = t5.getBoundingClientRect();
+
+        // ⭐ 5번 배경도 동일한 거리 조건 적용
+        if (r.left < window.innerWidth * 0.20 && r.right > window.innerWidth * 0.20) {
+
+            stage5Started = true;
+
+            blueScreens5.forEach((bs, index) => {
+                setTimeout(() => {
+                    spawnBlueScreen(gameArea, bs, "./노아 달리기 블루스크린 2.png");
+                }, index * 120);
+            });
+        }
+    }
+}
+
+function checkStage5BlueSound() {
+  if (!audioUnlocked) return;
+
+  const stage5 = document.getElementById("stage5-trigger");
+  const stage6 = document.getElementById("stage6");
+
+
+  // ▶️ 5번 배경 시작 → 소리 ON
+  if (stage5 && !stage5BluePlaying) {
+    const r5 = stage5.getBoundingClientRect();
+
+    if (r5.left < window.innerWidth * 0.9) {
+      stage5BluePlaying = true;
+      sfxBlue5.currentTime = 0;
+      sfxBlue5.volume = 0.8;
+      sfxBlue5.play().catch(() => {});
+    }
+  }
+
+  // 🔇 6번 배경 시작 후 조금 뒤 → 소리 OFF
+  if (stage6 && stage5BluePlaying && !stage6BlueStopScheduled) {
+    const r6 = stage6.getBoundingClientRect();
+
+    if (r6.left < window.innerWidth * 0.4) {
+      stage6BlueStopScheduled = true;
+
+      setTimeout(() => {
+        sfxBlue5.pause();
+        sfxBlue5.currentTime = 0;
+      }, 1200); // ⭐ “조금 뒤” (1.2초)
+    }
+  }
+}
+
+function checkStage3Bridge() {
+    const t3_0 = document.getElementById("stage3-trigger-1"); // i=0
+    const t3_1 = document.getElementById("stage3-trigger-2"); // i=1
+
+    // i=0 반복: 뿅!
+    if (t3_0 && !stage3Spawn0) {
+        const r = t3_0.getBoundingClientRect();
+        if (r.left < window.innerWidth * 0.30 &&
+            r.right > window.innerWidth * 0.30) {
+            stage3Spawn0 = true;
+            spawnStage3Bridge(t3_0);
+        }
+    }
+
+    // i=1 반복: 뿅! (첫 번째와 완전히 동일)
+    if (t3_1 && !stage3Spawn1) {
+        const r = t3_1.getBoundingClientRect();
+        if (r.left < window.innerWidth * 0.30 &&
+            r.right > window.innerWidth * 0.30) {
+            stage3Spawn1 = true;
+            spawnStage3Bridge(t3_1);
+        }
+    }
+}
+
+
+
+function spawnStage3Bridge(target) {
+  playBridgeSFX(); 
+    const spawnLeft = noahX + 6.5;
+
+    const bridge = document.createElement("div");
+    bridge.className = "bridgeBlock";
+    bridge.style.left = spawnLeft + "%";
+    bridge.style.bottom = "15%";
+    bridge.style.width = "50%";
+    bridge.style.height = "60%";
+    bridge.style.backgroundImage = "url('./노아 달리기 다리.png')";
+    bridge.style.backgroundSize = "100% 100%";
+    bridge.style.position = "absolute";
+    bridge.style.imageRendering = "pixelated";
+    bridge.style.zIndex = "8";
+    target.appendChild(bridge);
+
+    const platform = document.createElement("div");
+    platform.className = "platformBlock";
+    platform.style.left = (spawnLeft + 10) + "%";
+    platform.style.bottom = "42.5%";
+    platform.style.width = "30%";
+    platform.style.height = "5%";
+    platform.style.position = "absolute";
+    platform.style.background = "rgba(255,0,0,0)";
+    platform.style.zIndex = "99";
+    target.appendChild(platform);
+
+    bridge.style.animation = "bridgePop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1)";
+}
+
+function checkStage6Falling() {
+    const s0 = document.getElementById("stage6");         // i=0 세트
+    const s1 = document.getElementById("stage6-repeat");  // i=1 세트
+
+    const hb = hitbox.getBoundingClientRect();
+    const noahCenter = hb.left + hb.width * 0.5;
+
+    // -------------------------
+    // 🔥 i = 0 반복
+    // -------------------------
+    if (s0 && !stage6Fall0) {
+        const r = s0.getBoundingClientRect();
+
+        // 노아가 배경의 30~70% 영역을 통과했을 때 쿵 생성
+        const triggerL = r.left + r.width * 0.3;
+        const triggerR = r.left + r.width * 0.7;
+
+        if (noahCenter > triggerL && noahCenter < triggerR) {
+
+            stage6Fall0 = true;
+
+            fallObstacleInfo[6].forEach(f => {
+                setTimeout(() => {
+                    spawnFallingObstacle(f, s0, 6);
+                }, f.delay || 0);
+            });
+        }
+    }
+
+    // -------------------------
+    // 🔥 i = 1 반복
+    // -------------------------
+    if (s1 && !stage6Fall1) {
+        const r = s1.getBoundingClientRect();
+
+        const triggerL = r.left + r.width * 0.1;
+        const triggerR = r.left + r.width * 0.3;
+
+        if (noahCenter > triggerL && noahCenter < triggerR) {
+
+            stage6Fall1 = true;
+
+            fallObstacleInfo[6].forEach(f => {
+                setTimeout(() => {
+                    spawnFallingObstacle(f, s1, 6);
+                }, f.delay || 0);
+            });
+        }
+    }
+}
+
+let lightningTriggered0 = false;
+let lightningTriggered1 = false;
+
+function checkLightningTrigger() {
+    const t3_0 = document.getElementById("stage3-trigger-1"); 
+    const t3_1 = document.getElementById("stage3-trigger-2"); 
+    const hb = hitbox.getBoundingClientRect();
+    const noahCenter = hb.left + hb.width * 0.5;
+
+    // i=0 세트
+    if (t3_0 && !lightningTriggered0) {
+        const rect = t3_0.getBoundingClientRect();
+
+        if (noahCenter > rect.left + rect.width * 0.25 &&
+            noahCenter < rect.left + rect.width * 0.65) {
+
+            lightningTriggered0 = true;
+            activateLightning(t3_0);
+        }
+    }
+
+    // i=1 세트
+    if (t3_1 && !lightningTriggered1) {
+        const rect = t3_1.getBoundingClientRect();
+
+        if (noahCenter > rect.left + rect.width * 0.25 &&
+            noahCenter < rect.left + rect.width * 0.65) {
+
+            lightningTriggered1 = true;
+            activateLightning(t3_1);
+        }
+    }
+}
+
+function activateLightning(targetSet) {
+  const sparks = targetSet.querySelectorAll(".spark");
+  const loops  = targetSet.querySelectorAll(".sparkLoop");
+
+  sparks.forEach(s => s.style.display = "none");
+  loops.forEach(l => l.style.display = "block");
+
+  // 🔊 전기 사운드 제어
+  if (targetSet.id === "stage3-trigger-1") {
+    // 0회 반복
+    if (electricCount0 < 2) {
+      playElectricSFX();
+      electricCount0++;
+    }
+  }
+
+  if (targetSet.id === "stage3-trigger-2") {
+    // 1회 반복
+    if (electricCount1 < 2) {
+      playElectricSFX();
+      electricCount1++;
+    }
+  }
+}
+
+
+
+/* ===================================================================
+   GAME LOOP
+=================================================================== */
+
+function gameLoop() {
+
+checkBlueScreen();
+
+
+
+  // ⭐ 엔딩 자동 달리기 모드
+  if (finalRun) {
+      noahX += 0.3;               // % 단위 이동
+      noah.style.left = noahX + "%";
+
+      if (noahX > 120) {
+          window.location.href = "noah fight.html";
+      }
+
+      requestAnimationFrame(gameLoop);
+      return;
+  }
+
+  if (isPaused) {
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+ moveBackground();
+ checkStage3Bridge();
+ checkStage6Falling();
+ checkLightningTrigger();
+ checkStage2PaperSound();
+checkStage5BlueSound();
+
+
+
+  /* 중력 */
+  vy -= 0.03;
+  y += vy;
+
+  const hb = hitbox.getBoundingClientRect();
+
+  /* =====================================================
+     🟡 착지 판정 (groundBlock만)
+  ===================================================== */
+
+  const grounds = [...document.querySelectorAll(".groundBlock, .platformBlock")]
+  .filter(el => !el.classList.contains("item"));  // 아이템 아래 platform 무효화
+
+
+
+  let landed = false;
+  let groundTopVH = null;
+
+  
+  for (let plat of grounds) {
+
+  // ⭐ 아이템 위는 착지로 판정하지 않기
+  if (plat.classList.contains("item")) continue;
+
+  const p = plat.getBoundingClientRect();
+
+  const horizontally = hb.right > p.left && hb.left < p.right;
+  const isFalling = vy <= 0;
+
+  const justLanded =
+    isFalling &&
+    hb.bottom >= p.top - 10 &&
+    hb.bottom <= p.top + 20;
+
+  if (horizontally && justLanded) {
+    groundTopVH = (window.innerHeight - p.top) / window.innerHeight * 100;
+    landed = true;
+    break;
+  }
+}
+
+
+  if (landed) {
+    y = groundTopVH - 10;
+    vy = 0;
+    onGround = true;
+
+    if (currentAction === "jump") setNoahAction("run");
+
+  } else {
+    onGround = false;   // ← ★ 반드시 false여야 점프 정상 작동
+  }
+
+
+  /* =====================================================
+     🟡 추락 사망 판정
+  ===================================================== */
+  if (!landed && y < -20) {
+    triggerGameOver();
+    return;
+  }
+
+
+  /* =====================================================
+     🟡 일반 장애물 충돌
+  ===================================================== */
+  /* =====================================================
+   🟡 일반 장애물 충돌 (히트박스 크게 유지하면서도 즉사 방지)
+===================================================== */
+const obstacles = document.querySelectorAll(".obstacle");
+
+for (let ob of obstacles) {
+  const r = ob.getBoundingClientRect();
+
+  // ⭐ 장애물 판정을 실제 몸통 부분으로 축소
+  const o = {
+    left:   r.left + r.width * 0.15,    // 양쪽 15% 잘라내기
+    right:  r.right - r.width * 0.15,
+    top:    r.top + r.height * 0.15,    // 위쪽 여백 제거
+    bottom: r.bottom - r.height * 0.05  // 아래는 여백 거의 없음
+  };
+
+  const hit =
+    hb.right > o.left &&
+    hb.left < o.right &&
+    hb.bottom > o.top &&
+    hb.top < o.bottom;
+
+  if (hit) {
+    triggerGameOver();
+    return;
+  }
+}
+
+/* =====================================================
+   ⚡ 번개 충돌 → 즉사 (판정 완화 버전)
+===================================================== */
+const lightnings = document.querySelectorAll(".sparkLoop");
+
+for (let lg of lightnings) {
+  const r = lg.getBoundingClientRect();
+
+  // 화면 밖 번개는 무시
+  if (r.right < 0 || r.left > window.innerWidth) continue;
+
+  // ⭐ 판정 축소 (중앙부만 위험)
+  const o = {
+    left:   r.left + r.width  * 0.5,  // 좌우 25% 컷
+    right:  r.right - r.width * 0.5,
+    top:    r.top + r.height  * 0.15,  // 위쪽 여백
+    bottom: r.bottom - r.height * 0.10 // 아래 여백
+  };
+
+  const hit =
+    hb.right > o.left &&
+    hb.left < o.right &&
+    hb.bottom > o.top &&
+    hb.top < o.bottom;
+
+  if (hit) {
+    triggerGameOver();
+    return;
+  }
+}
+
+
+/* =====================================================
+   🔵 블루 장애물 충돌 → 즉사 (판정 완화 버전)
+===================================================== */
+const blueObstacles = document.querySelectorAll(
+  ".obstacle-stage4, .obstacle-stage5"
+);
+
+for (let bo of blueObstacles) {
+  const r = bo.getBoundingClientRect();
+
+  // 화면 밖 무시
+  if (r.right < 0 || r.left > window.innerWidth) continue;
+
+  // ⭐ 판정 축소 (중앙부만 위험)
+  const o = {
+    left:   r.left + r.width  * 0.5,   // 좌우 여백
+    right:  r.right - r.width * 0.5,
+    top:    r.top + r.height  * 0.18,   // 위 여백
+    bottom: r.bottom - r.height * 0.12  // 아래 여백
+  };
+
+  const hit =
+    hb.right > o.left &&
+    hb.left < o.right &&
+    hb.bottom > o.top &&
+    hb.top < o.bottom;
+
+  if (hit) {
+    triggerGameOver();
+    return;
+  }
+}
+
+
+
+  /* =====================================================
+     🟡 쿵 장애물 충돌 → 데미지 처리
+  ===================================================== */
+  /* =====================================================
+   🟡 쿵 장애물 충돌 → 데미지 처리
+===================================================== */
+const fixedObs = [...document.querySelectorAll(".groundObstacle")]
+  .filter(fo => {
+    const o = fo.getBoundingClientRect();
+    return o.right > 0 && o.left < window.innerWidth;
+  });
+
+for (let fo of fixedObs) {
+
+  if (fo.dataset.hit === "1") continue;
+
+  const r = fo.getBoundingClientRect();
+
+// ⭐ 충돌 박스 실제로 좁히기 (중심부만 판정)
+// 아래와 왼쪽쪽의 판정을 크게 제거!
+const o = {
+  left:   r.left + (r.width * 0.15),     // 왼쪽 35% 제거 → 왼쪽 스침 모두 무시됨
+  right:  r.right - (r.width * 0.15),    // 오른쪽 15% 제거
+  top:    r.top + (r.height * 0.10),     // 위쪽 판정 축소
+  bottom: r.bottom - (r.height * 0.12)   // 아래쪽 판정 크게 축소
+};
+
+
+  const hit =
+    hb.right > o.left &&
+    hb.left < o.right &&
+    hb.bottom > o.top &&
+    hb.top < o.bottom;
+
+  if (hit) {
+
+  // ⭐ 진짜로 겹쳤을 때만 데미지
+  handleFallingObstacleHit();
+  fo.dataset.hit = "1";
+
+  break;
+}
+
+}
+/* =====================================
+   🟡 아이템 먹기 판정
+===================================== */
+document.querySelectorAll(".item").forEach(item => {
+  const type = item.dataset.type;
+  const r = item.getBoundingClientRect();
+
+  // ⭐ 가장 중요한 최적화! 화면 밖 아이템은 검사 안 함
+  if (r.right < 0 || r.left > window.innerWidth) return;
+
+  const hit =
+    hb.right > r.left &&
+    hb.left < r.right &&
+    hb.bottom > r.top &&
+    hb.top < r.bottom;
+
+  if (hit) {
+  playItemSFX();   // ⭐ 여기!! 이 줄!!
+
+  item.style.transition = "0.2s ease-out";
+  item.style.transform = "translateY(-20px) scale(0)";
+  setTimeout(() => item.remove(), 200);
+  console.log("획득:", itemScore[type]);
+}
+
+});
+
+
+
+  /* =====================================================
+     🟡 노아 위치 반영
+  ===================================================== */
+  noah.style.bottom = (10 + y) + "%";
+  hitbox.style.bottom = (10 + y) + "%";
+  hitbox.style.left =
+    (noah.offsetLeft + noah.offsetWidth * 0.25) + "px";
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
+
+
+/* ===================================================================
+   초기 위치 보정
+=================================================================== */
+setTimeout(() => {
+  const firstGround = document.querySelector(".groundBlock");
+  if (!firstGround) return;
+
+  const g = firstGround.getBoundingClientRect();
+  const groundTop = (window.innerHeight - g.top) / window.innerHeight * 100;
+
+  noah.style.bottom = (groundTop - 10) + "%";
+}, 50);
+
+
+
+
+/* ===================================================================
+   화면 흔들림 효과
+=================================================================== */
+
+function screenShake() {
+  const area = document.querySelector(".game-area");
+  area.style.transition = "transform 0.05s";
+
+  let shakeCount = 0;
+
+  const shakeInterval = setInterval(() => {
+    area.style.transform =
+      `translate(${(Math.random() - 0.5) * 10}px, ${(Math.random() - 0.5) * 30}px)`;
+
+    shakeCount++;
+    if (shakeCount > 10) {
+      clearInterval(shakeInterval);
+      area.style.transform = "translate(0,0)";
+    }
+  }, 50);
+}
+
+
+window.addEventListener("resize", () => {
+  // 줌 변동 감지되면 0.5초 동안 모든 트리거 OFF
+  disableTriggersUntil = performance.now() + 500;
+});
+
+/* ==========================
+   GAME OVER 처리
+========================== */
+function triggerGameOver() {
+  if (isDead) return;
+
+  isDead = true;
+  isPaused = true;
+
+  // 노아 죽음 이미지
+  noah.src = "./노아 죽음.png";
+
+  // 다시하기 오버레이 표시 (⭐ 핵심)
+  const overlay = document.getElementById("retry-overlay");
+  if (overlay) {
+    overlay.style.display = "flex";
+  }
+}
+
+document.getElementById("retry-btn").addEventListener("click", () => {
+  location.reload();
+});
+
+
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+

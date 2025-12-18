@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Noah’s Internet Quest — Eye Sync Transformation</title>
+<link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.0/DungGeunMo.css" rel="stylesheet">
+<style>
+  html, body {
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    overflow: hidden;
+  }
+
+  /* ===== 화면 비율 고정 16:9 ===== */
+  .game-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+  }
+  .game-area {
+    position: relative;
+    width: calc(100vh * (16/9));
+    height: 100vh;
+    max-width: 100vw;
+    max-height: calc(100vw * (9/16));
+    overflow: hidden;
+    background: black;
+    image-rendering: pixelated;
+  }
+
+  /* ===== 배경 ===== */
+  .background {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    transition: filter 0.4s ease;
+  }
+
+  /* ===== 눈 =====*/
+  .eye-wrapper {
+    position: absolute;
+    top: -1%;
+    left: 0;
+    width: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .eye {
+    width: 100%;
+    height: auto;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: transform 0.05s linear, opacity 2s ease, filter 2s ease;
+    image-rendering: pixelated;
+  }
+
+  /* ===== 아이콘 ===== */
+  .icon {
+    position: absolute;
+    width: 7%;
+    image-rendering: pixelated;
+    cursor: pointer;
+    z-index: 5;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    filter: drop-shadow(-0.6vh -0.6vh 0 #131313);
+  }
+  .icon:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 1.2vh rgba(255,255,255,0.9));
+  }
+
+  .internet { top: 7%; left: 6%; }
+  .mail { top: 20%; left: 6%; }
+  .folder { top: 33%; left: 6%; }
+  .trash { top: 46%; left: 6%; }
+  .game { top: 59%; left: 5%; width: 9%; }
+  .music-icon { top: 72%; left: 6%; }
+
+  /* ===== 자막 ===== */
+  #subtitle {
+    position: absolute;
+    bottom: 6%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DungGeunMo';
+    font-size: 2.4vh;
+    color: #fff;
+    background: rgba(0,0,0,0.65);
+    padding: 1.3vh 2vw;
+    border: 0.45vh solid #fff;
+    border-radius: 1vh;
+    text-align: center;
+    display: none;
+    z-index: 50;
+    image-rendering: pixelated;
+  }
+
+  .next-indicator {
+    color: #ffcc00;
+    margin-left: 1vw;
+    animation: nextBlink 1s infinite alternate;
+  }
+  @keyframes nextBlink {
+    from { opacity: 0.3; }
+    to { opacity: 1; }
+  }
+
+  /* ===== 폭발 ===== */
+  @keyframes pangExplode {
+    0% { transform: scale(1); filter: brightness(1); opacity: 1; }
+    40% { transform: scale(1.3); filter: brightness(3) invert(1); }
+    70% { transform: scale(2); filter: brightness(5) invert(1); opacity:1; }
+    100% { transform: scale(4); filter: brightness(7) invert(1); opacity:0; }
+  }
+
+  /* ===== 화면 번쩍 ===== */
+  .flash-overlay {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    z-index: 200;
+    pointer-events: none;
+  }
+  @keyframes screenFlash {
+    0% { background: rgba(255,255,255,0); }
+    15% { background: rgba(255,255,255,1); }
+    40% { background: rgba(255,255,255,0.8); }
+    100% { background: rgba(255,255,255,0); }
+  }
+
+</style>
+</head>
+
+<body>
+<div class="game-container">
+<div class="game-area" id="gameArea">
+
+  <img class="background" id="bg" src="./노아 게임 후 망가짐.gif" />
+
+  <!-- 눈 -->
+  <div class="eye-wrapper" id="eyeWrapper">
+    <img class="eye" id="eyeOld" src="./충격 눈알.png" />
+    <img class="eye" id="eyeNew" src="./눈알.png" style="opacity:0;" />
+  </div>
+
+  <!-- 아이콘 -->
+  <img class="icon internet" src="./인터넷 로고.png" />
+  <img class="icon mail" src="./메세지 아이콘.png" />
+  <img class="icon folder" src="./폴더 아이콘.png" />
+  <img class="icon trash" src="./쓰레기통.png" />
+  <img class="icon game" id="gameIcon" src="./불법게임 아이콘.png" />
+  <img class="icon music-icon" src="./음악아이콘.png" />
+
+  <!-- 자막 -->
+  <div id="subtitle"></div>
+
+  <!-- 번쩍 -->
+  <div class="flash-overlay" id="flash"></div>
+
+  <audio id="explodeSound" src="./게임사라짐.mp3"></audio>
+
+</div>
+</div>
+
+
+<script>
+/* ============================ */
+/*        👁 눈 움직임         */
+/* ============================ */
+const eyeWrapper = document.getElementById("eyeWrapper");
+const eyeOld = document.getElementById("eyeOld");
+const eyeNew = document.getElementById("eyeNew");
+
+function updateEye(e) {
+  const rect = eyeWrapper.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = e.clientX - cx;
+  const dy = e.clientY - cy;
+
+  const maxMove = rect.width * 0.005;
+  const mx = Math.max(Math.min(dx / 20, maxMove), -maxMove);
+  const my = Math.max(Math.min(dy / 20, maxMove), -maxMove);
+
+  eyeOld.style.transform = `translate(${mx}px, ${my}px)`;
+  eyeNew.style.transform = `translate(${mx}px, ${my}px)`;
+}
+window.addEventListener("mousemove", updateEye);
+
+window.addEventListener("resize", () => {
+  eyeOld.style.transform = "translate(0,0)";
+  eyeNew.style.transform = "translate(0,0)";
+});
+
+
+/* ============================ */
+/*        💬 자막 시스템        */
+/* ============================ */
+const subtitle = document.getElementById("subtitle");
+
+function showSubtitle(text, next = true) {
+  subtitle.innerHTML = next
+    ? `${text}<span class="next-indicator">다음 ▶</span>`
+    : text;
+  subtitle.style.display = "block";
+}
+
+
+/* ============================ */
+/*        💥 폭발 & 전환       */
+/* ============================ */
+const bg = document.getElementById("bg");
+const flash = document.getElementById("flash");
+const gameIcon = document.getElementById("gameIcon");
+const explodeSound = document.getElementById("explodeSound");
+
+let step = 0;
+
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    showSubtitle("이게 대체 무슨..");
+    step = 1;
+  }, 1500);
+});
+
+subtitle.addEventListener("click", () => {
+
+  /* ===== 1단계: 폭발 ===== */
+  if (step === 1) {
+    showSubtitle("...", false);
+
+    bg.style.filter = "invert(1) brightness(2)";
+    flash.style.animation = "screenFlash 0.6s ease";
+
+    gameIcon.style.animation =
+      "pangExplode 0.45s ease-out forwards";
+
+    explodeSound.currentTime = 0;
+    explodeSound.play().catch(() => {});
+
+    setTimeout(() => {
+      bg.style.filter = "none";
+      gameIcon.style.display = "none";
+
+      eyeOld.style.filter = "brightness(3) blur(0.5vh)";
+      eyeOld.style.opacity = 0;
+      eyeNew.style.opacity = 1;
+
+      setTimeout(() => {
+        eyeOld.remove();
+        step = 2;
+      }, 2200);
+    }, 600);
+  }
+
+  /* ===== 2단계: 대사 → 화면전환 ===== */
+  else if (step === 2) {
+    subtitle.innerHTML = `
+      게임이.. 사라졌어.. 아마 내가 잡혔다면, 못 나왔을거야
+      <span id="goNext" class="next-indicator" style="cursor:pointer"> 다음 ▶</span>
+    `;
+
+    document.getElementById("goNext").addEventListener("click", () => {
+      subtitle.style.display = "none";
+
+      const fade = document.createElement("div");
+      fade.style = `
+        position:absolute; inset:0;
+        background:black; opacity:0;
+        transition:opacity 1s ease;
+        z-index:500;
+      `;
+      document.getElementById("gameArea").appendChild(fade);
+
+      setTimeout(() => fade.style.opacity = 1, 50);
+
+      setTimeout(() => {
+        window.location.href = "noah computer main 5.html";
+      }, 1500);
+    });
+
+    step = 3;
+  }
+});
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Noah Infected</title>
+<link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.0/DungGeunMo.css" rel="stylesheet">
+
+<style>
+/* ================================ */
+/*        16:9 고정 캔버스         */
+/* ================================ */
+html, body {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.game-area {
+  position: relative;
+  width: calc(100vh * (16 / 9));   /* 기본 16:9 */
+  height: 100vh;
+  max-width: 100vw;                 /* 화면이 세로로 길 때 */
+  max-height: calc(100vw * (9 / 16));
+  overflow: hidden;
+  image-rendering: pixelated;
+  background: #000;
+}
+
+/* ================================ */
+/*          STAGE (BACKGROUND)      */
+/* ================================ */
+.stage {
+  width:100%;
+  height:100%;
+  position:relative;
+  overflow:hidden;
+}
+
+.noah-face {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  position:absolute;
+  top:0; left:0;
+  z-index:1;
+  image-rendering:pixelated;
+}
+
+/* ================================ */
+/*                EYES              */
+/* ================================ */
+.eye-wrapper {
+  width:100%;
+  position:absolute;
+  top:0%;
+  left:0;
+  pointer-events:none;
+  z-index:3;
+}
+
+.eye {
+  width:100%;
+  height:auto;
+  transition:transform 0.05s linear;
+  image-rendering:pixelated;
+}
+
+#eyeWrapperRelief {
+  display:none;
+  z-index:4;
+}
+
+/* ================================ */
+/*          RELIEF NOAH             */
+/* ================================ */
+#noahRelief {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  position:absolute;
+  top:0; left:0;
+  display:none;
+  opacity:0;
+  transition:opacity 1.4s ease;
+  z-index:4;
+}
+
+/* ================================ */
+/*            MAIN BUTTON           */
+/* ================================ */
+#backToMain {
+  position:absolute;
+  bottom:7vh;
+  right:5vw;
+  padding:1.2vh 2.5vw;
+  background:rgba(0,0,0,0.75);
+  color:#fff;
+  border:0.3vw solid #fff;
+  border-radius:0.6vw;
+  font-family:"DungGeunMo", monospace;
+  font-size:2.2vh;
+  text-decoration:none;
+  display:none;
+  z-index:20;
+}
+#backToMain:hover {
+  background:#fff;
+  color:#000;
+}
+
+/* ================================ */
+/*             SUBTITLE             */
+/* ================================ */
+#subtitle {
+  position: absolute;
+  bottom: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1.3vh 2vw;
+  background: rgba(0, 0, 0, 0.65);
+  border: 0.4vh solid #fff;
+  border-radius: 1vh;
+  font-family: 'DungGeunMo';
+  font-size: 2.3vh;
+  color: white;
+  text-align: center;
+  z-index: 999999;
+  display: none;
+  image-rendering: pixelated;
+}
+
+@keyframes blinkText {
+  0% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+
+/* ================================ */
+/*           ALERT OVERLAY          */
+/* ================================ */
+#alertOverlay {
+  position:absolute;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(255,0,0,0.3);
+  z-index:9999;
+  opacity:0;
+  display:none;
+  animation:blinkRed 0.5s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+@keyframes blinkRed {
+  from {opacity:0.2;}
+  to {opacity:0.6;}
+}
+
+/* ================================ */
+/*        MESSAGE POPUP MAIN        */
+/* ================================ */
+#messageContainer {
+  width:30%;
+  position:absolute;
+  top:20%;
+  left:35%;
+  z-index:500;
+  display:none;
+  border:0.3vw solid #000;
+  box-shadow:0.6vw 0.6vw 0 rgba(0,0,0,0.9);
+  image-rendering:pixelated;
+}
+
+#messageWindow {
+  width:100%;
+  height:auto;
+  display:block;
+}
+
+#messageHeader {
+  width:100%;
+  height:3.2vh;
+  position:absolute;
+  top:0; left:0;
+  cursor:grab;
+}
+
+.closeBtn {
+  width:2.2vw;
+  height:2.2vw;
+  position:absolute;
+  top:0.4vh;
+  right:0.5vw;
+  cursor:pointer;
+}
+
+/* ================================ */
+/*           VIRUS POPUPS           */
+/* ================================ */
+.virus-msg {
+  width:30%;
+  position:absolute;
+  border:0.3vw solid #000;
+  opacity:0.92;
+  box-shadow:0.6vw 0.6vw 0 rgba(0,0,0,0.9);
+  image-rendering:pixelated;
+  z-index:600;
+}
+
+/* ================================ */
+/*           QUEST BOX              */
+/* ================================ */
+#questBox {
+  position:absolute;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  padding:5vh 6vw;
+  font-family:"DungGeunMo", monospace;
+  background: repeating-linear-gradient(45deg,#0a0a0a 0 2px,#0c0c0c 2px 4px);
+  border:0.5vw solid #ff0000;
+  outline:0.4vw solid #660000;
+  border-radius:0.4vw;
+  color:#e6e6e6;
+  font-size:2.5vh;
+  box-shadow:0.5vw 0.5vw 0 #440000,
+              inset 0.3vw 0.3vw 0 #220000,
+              inset -0.3vw -0.3vw 0 #220000;
+  text-align:center;
+  z-index:150000;
+  display:none;
+  image-rendering:pixelated;
+}
+#questBox button {
+  margin-top:3vh;
+  padding:1.4vh 4vw;
+  font-size:2.4vh;
+  background:#ff0000;
+  color:#fff;
+  border:0.4vw solid #fff;
+  cursor:pointer;
+  box-shadow:0.4vw 0.4vw 0 #550000,
+              inset 0.25vw 0.25vw 0 #220000;
+  font-family:"DungGeunMo", monospace;
+  transition:0.15s;
+}
+#questBox button:hover {
+  transform:translate(-0.15vw,-0.15vw) scale(1.05);
+  box-shadow:0.5vw 0.5vw 0 #880000,
+              inset 0.22vw 0.22vw 0 #220000;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="game-container">
+  <div class="game-area">
+
+    <div class="stage">
+      <img src="./노아 일그러진 얼굴.gif" class="noah-face">
+
+      <div class="eye-wrapper" id="eyeWrapper">
+        <img src="./눈알.png" id="eye" class="eye">
+      </div>
+
+      <img id="noahRelief" src="./노아 안도하는 장면.gif">
+
+      <div class="eye-wrapper" id="eyeWrapperRelief">
+        <img src="./눈알.png" id="eyeRelief" class="eye">
+      </div>
+
+      <a id="backToMain" href="noah computer main 2 quest.html">
+        링크 바이러스 해결
+      </a>
+    </div>
+
+    <div id="alertOverlay"></div>
+
+    <div id="messageContainer">
+      <div id="messageHeader"></div>
+      <img id="messageWindow" src="./팝업창-에러-원본.png">
+      <div class="closeBtn"></div>
+    </div>
+
+    <div id="subtitle"></div>
+
+  </div>
+</div>
+
+
+<!-- 🎧 사운드 -->
+<audio id="errorSound" src="./윈도우-송.mp3" preload="auto"></audio>
+<audio id="alertBgm" src="./삐용삐용 음악.mp3" preload="auto" loop></audio>
+<audio id="closeSound" src="./딸깍.mp3" preload="auto"></audio>
+<audio id="nextSound" src="./다음 클릭.mp3" preload="auto"></audio>
+<audio id="bgPeace" src="./메일 바이러스 배경음.mp3" preload="auto" loop></audio>
+
+
+
+
+<script>
+/* === 👁 눈 움직임 — game-area 기준 비율로 통일 === */
+const gameArea = document.querySelector(".game-area");
+
+const eye = document.getElementById("eye");
+const eyeWrapper = document.getElementById("eyeWrapper");
+
+const eyeRelief = document.getElementById("eyeRelief");
+const eyeWrapperRelief = document.getElementById("eyeWrapperRelief");
+const nextSound = document.getElementById("nextSound");
+
+/* === 두 눈 모두 움직이도록 수정됨 === */
+function updateEye(e) {
+  const areaRect = gameArea.getBoundingClientRect();
+
+  const relX = (e.clientX - areaRect.left) / areaRect.width;
+  const relY = (e.clientY - areaRect.top) / areaRect.height;
+
+  const dx = relX - 0.5;
+  const dy = relY - 0.5;
+
+  /* ===== 기본 눈 ===== */
+  const eyeRect = eyeWrapper.getBoundingClientRect();
+  const maxMove = eyeRect.width * 0.005;
+  const moveX = Math.max(Math.min(dx * maxMove * 2, maxMove), -maxMove);
+  const moveY = Math.max(Math.min(dy * maxMove * 2, maxMove), -maxMove);
+  eye.style.transform = `translate(${moveX}px, ${moveY}px)`;
+
+  /* ===== 안도 눈 ===== */
+  if (eyeWrapperRelief.style.display === "block") {
+    const rRect = eyeWrapperRelief.getBoundingClientRect();
+    const maxR = rRect.width * 0.005;
+    const moveXR = Math.max(Math.min(dx * maxR * 2, maxR), -maxR);
+    const moveYR = Math.max(Math.min(dy * maxR * 2, maxR), -maxR);
+    eyeRelief.style.transform = `translate(${moveXR}px, ${moveYR}px)`;
+  }
+}
+
+window.addEventListener("mousemove", updateEye);
+
+window.addEventListener("resize", () => {
+  eye.style.transform = "translate(0,0)";
+  eyeRelief.style.transform = "translate(0,0)";
+});
+
+
+/* ============================================================
+   🟡 2. 변수 선언
+============================================================ */
+const subtitle = document.getElementById("subtitle");
+const alertOverlay = document.getElementById("alertOverlay");
+const noahRelief = document.getElementById("noahRelief");
+const mainBtn = document.getElementById("backToMain");
+const messageContainer = document.getElementById("messageContainer");
+const header = document.getElementById("messageHeader");
+
+const errorSound = document.getElementById("errorSound");
+const alertBgm = document.getElementById("alertBgm");
+const closeSound = document.getElementById("closeSound");
+// === 배경음 ===
+const bgPeace = document.getElementById("bgPeace");   // 지금 화면 배경음    // 다음 화면 배경음
+bgPeace.volume = 1;
+
+// 모바일 자동재생 허용
+document.addEventListener("click", () => {
+  bgPeace.play().catch(()=>{});
+}, { once: true });
+
+
+
+/* ============================================================
+   🟡 3. 드래그 기능
+============================================================ */
+let drag = false;
+let offsetX = 0, offsetY = 0;
+
+header.addEventListener("mousedown", (e) => {
+  drag = true;
+  offsetX = e.clientX - messageContainer.offsetLeft;
+  offsetY = e.clientY - messageContainer.offsetTop;
+});
+
+document.addEventListener("mousemove", (e) => {
+  if (drag) {
+    messageContainer.style.left = (e.clientX - offsetX) + "px";
+    messageContainer.style.top = (e.clientY - offsetY) + "px";
+  }
+});
+
+document.addEventListener("mouseup", () => drag = false);
+
+
+/* ============================================================
+   🟡 4. 자막 헬퍼
+============================================================ */
+let subtitleTimeout;
+
+function flashSubtitle(text, duration = 3500) {
+  clearTimeout(subtitleTimeout);
+  subtitle.textContent = text;
+  subtitle.style.display = "block";
+
+  subtitleTimeout = setTimeout(() => {
+    subtitle.style.display = "none";
+  }, duration);
+}
+
+
+/* ============================================================
+   🟡 5. 첫 자막
+============================================================ */
+function showEmptyScreenSubtitle() {
+  subtitle.innerHTML = `
+    뭐야...<br>화면에 왜 아무것도 없어졌지...?<br><br>
+    <span id="subtitleNext" 
+          style="color:#ffcc00; margin-left:1vw; cursor:pointer; 
+          animation:blinkText 1s infinite alternate;">
+      다음 ▶
+    </span>
+  `;
+
+  subtitle.style.display = "block";
+
+  document.getElementById("subtitleNext").onclick = () => {
+  nextSound.currentTime = 0;
+  nextSound.play().catch(()=>{});
+
+    [errorSound, alertBgm, closeSound].forEach(a => {
+      a.play().then(() => a.pause()).catch(()=>{});
+    });
+
+    subtitle.style.display = "none";
+
+    setTimeout(() => {
+      alertOverlay.style.display = "block";
+      alertBgm.currentTime = 0;
+      alertBgm.volume = 0.5;
+      alertBgm.play().catch(()=>{});
+      showInfectionSubtitle();
+    }, 250);
+  };
+}
+
+
+/* ============================================================
+   🟡 6. 감염 안내 자막
+============================================================ */
+function showInfectionSubtitle() {
+  subtitle.innerHTML = `
+    HENRY가 준 링크를 클릭했더니 화면이 감염됐어!<br><br>
+    <b>HENRY</b>와의 <b>대화 메시지 팝업창</b>을 찾아서<br>
+    메시지 창을 닫아야 해!<br><br>
+    <span id="subtitleNextBtn"
+          style="color:#ffcc00; margin-left:1vw; cursor:pointer;
+          animation:blinkText 1s infinite alternate;">
+      다음 ▶
+    </span>
+  `;
+
+  subtitle.style.display = "block";
+
+  document.getElementById("subtitleNextBtn").onclick = () => {
+    nextSound.currentTime = 0;
+    nextSound.play().catch(()=>{});
+
+    subtitle.style.display = "none";
+    setTimeout(showQuestBox, 250);
+  };
+}
+
+
+/* ============================================================
+   🟡 7. 퀘스트 박스
+============================================================ */
+function showQuestBox() {
+  const q = document.createElement("div");
+  q.id = "questBox";
+  q.innerHTML = `
+    <p>헨리와의 진짜 대화창을 찾아서 없애야 한다.</p>
+    <button id="okBtn">OK</button>
+  `;
+  document.querySelector(".game-area").appendChild(q);
+  q.style.display = "block";
+
+  document.getElementById("okBtn").onclick = () => {
+    q.remove();
+    startPopups();
+  };
+}
+
+
+/* ============================================================
+   🟡 8. 팝업 스팸 시작
+============================================================ */
+function startPopups() {
+
+  messageContainer.style.display = "block";
+  messageContainer.style.top = "20%";
+  messageContainer.style.left = "35%";
+
+  const virusImages = [
+    "./팝업창-에러-1.png","./팝업창-에러-2.png","./팝업창-에러-3.png",
+    "./팝업창-에러-4.png","./팝업창-에러-5.png","./팝업창-에러-6.png",
+    "./팝업창-에러-7.png","./팝업창-에러-8.png"
+  ];
+
+  let index = 0;
+  const maxPopups = 15;
+
+  function spawn() {
+    if (index >= maxPopups) return;
+
+    const pop = messageContainer.cloneNode(true);
+    pop.classList.add("virus-msg");
+    pop.id = "";
+    pop.style.top = (Math.random() * 60 + 10) + "%";
+    pop.style.left = (Math.random() * 60 + 10) + "%";
+    pop.style.zIndex = 600 + index;
+
+    const img = pop.querySelector("#messageWindow");
+    img.src = virusImages[index % virusImages.length];
+
+    const head = pop.querySelector("#messageHeader");
+    let drag2 = false, ox = 0, oy = 0;
+
+    head.addEventListener("mousedown", (e) => {
+      drag2 = true;
+      ox = e.clientX - pop.offsetLeft;
+      oy = e.clientY - pop.offsetTop;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (drag2) {
+        pop.style.left = (e.clientX - ox) + "px";
+        pop.style.top = (e.clientY - oy) + "px";
+      }
+    });
+
+    document.addEventListener("mouseup", ()=> drag2=false);
+
+    const close = pop.querySelector(".closeBtn");
+    close.onclick = () => {
+      closeSound.currentTime = 0;
+      closeSound.play().catch(()=>{});
+      pop.remove();
+      flashSubtitle("이 메세지창이 아니었어!", 1500);
+    };
+
+    pop.style.opacity = "0";
+    document.querySelector(".game-area").appendChild(pop);
+
+    setTimeout(()=> {
+      pop.style.opacity = "1";
+      errorSound.currentTime = 0;
+      errorSound.play().catch(()=>{});
+    }, 100);
+
+    index++;
+    setTimeout(spawn, 250);
+  }
+
+  spawn();
+
+  /** 정답 팝업 닫기 */
+  const correct = messageContainer.querySelector(".closeBtn");
+  correct.onclick = () => {
+
+    closeSound.currentTime = 0;
+    closeSound.play().catch(()=>{});
+
+    alertBgm.pause();
+    alertBgm.currentTime = 0;
+    alertOverlay.style.display = "none";
+
+    document.querySelectorAll(".virus-msg").forEach(v => v.remove());
+
+    flashSubtitle("찾았다!", 3000);
+
+    setTimeout(() => {
+      flashSubtitle("휴... 놀래라...", 5500);
+
+      noahRelief.style.display = "block";
+
+      setTimeout(() => {
+        noahRelief.style.opacity = "1";
+
+        /* 👁 안도 눈 — 렌더링 완료 후 활성화 */
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            eyeWrapperRelief.style.display = "block";
+          });
+        });
+
+        mainBtn.style.display = "block";
+      }, 80);
+    }, 3200);
+
+    messageContainer.remove();
+  };
+}
+
+
+/* ============================================================
+   🟡 9. 시작
+============================================================ */
+window.addEventListener("load", showEmptyScreenSubtitle);
+
+
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
