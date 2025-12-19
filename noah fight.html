@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noah Boss Fight</title>
+<link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.0/DungGeunMo.css" rel="stylesheet">
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: black;
+}
+
+.game-area {
+  position: relative;
+  width: calc(100vh * (16 / 9));
+  height: 100vh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: url("./노아 달리기 마지막.png") no-repeat center/cover;
+}
+
+#noah {
+  position: absolute;
+  bottom: 15%;
+  left: 10%;
+  width: 18%;
+  image-rendering: pixelated;
+  z-index: 10;
+  transform: scaleX(-1);
+}
+
+#hitbox {
+  position: absolute;
+  width: 12%;
+  height: 23%;
+  left: 13%;
+  bottom: 15%;
+  background: rgba(0, 255, 0, 0);
+  pointer-events: none;
+}
+
+#monster {
+  position: absolute;
+  right: 5%;
+  bottom: 15%;
+  width: 22%;
+  z-index: 15;
+}
+
+.monster-beam {
+  position: absolute;
+  image-rendering: pixelated;
+  z-index: 20;
+}
+
+#fade {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: black;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.5s ease;
+  z-index: 999;
+}
+#life-ui {
+  position: absolute;
+  top: 3%;
+  left: 3%;
+  display: flex;
+  gap: 0.8vh;
+  z-index: 50;
+}
+
+/* 하트 이미지 */
+.life-heart {
+  width: 10vh;           /* ⭐ 화면 높이 기준 */
+  aspect-ratio: 1 / 1;    /* 정사각형 유지 */
+  image-rendering: pixelated;
+}
+
+
+
+#retry {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.retry-box {
+  text-align: center;
+  color: white;
+  font-family: 'DungGeunMo', monospace;
+}
+
+.retry-box p {
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.retry-box button {
+  font-size: 1.2rem;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="game-area">
+  <div id="life-ui"></div>
+  <img id="monster" src="./노아 괴물.gif">
+  <img id="noah" src="./노아 옆보기.gif">
+  <div id="hitbox"></div>
+</div>
+<audio id="bgm" src="./노아 싸움 노래.mp3" loop></audio>
+<audio id="beam-shot" src="./몬스터 빔 소리.mp3"></audio>
+<audio id="beam-reflect" src="./몬스터 빔 막기 소리.mp3"></audio>
+<audio id="monsterHitSound" src="./몬스터 아파하는 소리.mp3"></audio>
+<audio id="noahHitSound" src="./노아 아파하는 소리.mp3"></audio>
+<audio id="monsterExplodeSound" src="./괴물 잡고 터짐.mp3"></audio>
+<audio id="monsterCrySound" src="./괴물 잡고 울음.mp3"></audio>
+
+
+<div id="fade"></div>
+<div id="retry">
+  <div class="retry-box">
+    <p>NOAH DOWN</p>
+    <button onclick="location.reload()">다시하기</button>
+  </div>
+</div>
+<script>
+// ===========================
+// 🔒 히트박스 / ground 기준
+// ===========================
+const HITBOX_DEFAULT = { height: "23%", bottom: "15%" };
+const HITBOX_SLIDE   = { height: "15%", bottom: "11%" };
+
+const HITBOX_BASE_BOTTOM = 15; // 계산용
+const GROUND_NOAH   = 15;
+const GROUND_HITBOX = 15;
+
+// ===========================
+// 노아 상태
+// ===========================
+const noah = document.getElementById("noah");
+const hitbox = document.getElementById("hitbox");
+const bgm = document.getElementById("bgm");
+let noahLife = 5;
+const lifeUI = document.getElementById("life-ui");
+const beamShotSound = document.getElementById("beam-shot");
+const beamReflectSound = document.getElementById("beam-reflect");
+const monsterHitSound  = document.getElementById("monsterHitSound");
+const noahHitSound     = document.getElementById("noahHitSound");
+const monsterExplodeSound = document.getElementById("monsterExplodeSound");
+const monsterCrySound = document.getElementById("monsterCrySound");
+
+
+
+const idleIMG  = "./노아 옆보기.gif";
+const jumpIMG  = "./노아 달림 점프.gif";
+const slideIMG = "./노아 달림 슬라이드.gif";
+
+let y = 0;
+let vy = 0;
+let isJump = false;
+let isSlide = false;
+let isDefending = false;
+
+let monsterAlive = true;
+let monsterHP = 10;
+
+// 🎬 엔딩 전용
+let isEnding = false;
+let endingY = 0;
+let endingVy = 0;
+
+// ===========================
+// 공격 생성
+// ===========================
+const attackColors = [
+  "#ff3b3b","#ff7f00","#ffe600",
+  "#36ff4e","#00e0ff","#2d47ff",
+  "#c22dff","#ff4fdc"
+];
+
+function setRandomMonsterColor(beam) {
+  const c = attackColors[Math.floor(Math.random()*attackColors.length)];
+  beam.style.filter = `
+    drop-shadow(0 0 10px ${c})
+    drop-shadow(0 0 20px ${c})
+  `;
+}
+
+function shoot() {
+  if (!monsterAlive) return;
+
+  const beam = document.createElement("img");
+  beam.src = "./괴물 빛.gif";
+  beam.className = "monster-beam";
+  setRandomMonsterColor(beam);
+  
+  // 🔊 빔 발사 사운드
+beamShotSound.currentTime = 0;
+beamShotSound.volume = 0.6;
+beamShotSound.play().catch(()=>{});
+
+
+  // 🎯 높이 패턴 (위/중/아래)
+  const beamHeights = [32, 45, 58];
+  const idx = Math.floor(Math.random() * beamHeights.length);
+
+  beam.style.right = "-12%";
+  beam.style.top = beamHeights[idx] + "%";
+  beam.style.width = "15%";
+
+  document.querySelector(".game-area").appendChild(beam);
+
+  let x = 100;
+  const interval = setInterval(() => {
+    if (!monsterAlive) { beam.remove(); clearInterval(interval); return; }
+
+    x -= 1.5;
+    beam.style.right = (100-x)+"%";
+
+    const br = beam.getBoundingClientRect();
+    const hr = hitbox.getBoundingClientRect();
+
+    if (
+  br.left < hr.right &&
+  br.right > hr.left &&
+  br.top < hr.bottom &&
+  br.bottom > hr.top
+) {
+  if (isDefending) {
+    reflectBeam(beam);
+    clearInterval(interval);
+    return;
+  }
+
+  // 💔 노아 데미지
+  takeDamage();
+
+  beam.remove();
+  clearInterval(interval);
+  return;
+}
+
+
+    if (br.right < 0) {
+      beam.remove();
+      clearInterval(interval);
+    }
+  },16);
+}
+
+setInterval(shoot,1500);
+
+function takeDamage() {
+  // 🔊 노아 피격 사운드
+  noahHitSound.currentTime = 0;
+  noahHitSound.play().catch(()=>{});
+
+  noahLife--;
+  updateLifeUI();
+
+  // 💥 아파하는 GIF
+  noah.src = "./노아 달리다가 아픔.gif";
+
+  // 💥 흔들림 추가
+  noah.style.animation = "shake 0.3s linear 2";
+  noah.style.transform = "scaleX(-1)";
+
+
+  // 💥 깜빡임 (강화 버전)
+  let blinkCount = 0;
+  const blink = setInterval(() => {
+    noah.style.opacity = (noah.style.opacity === "1") ? "0.2" : "1";
+    blinkCount++;
+
+    if (blinkCount >= 6) { // 3번 깜빡
+      clearInterval(blink);
+      noah.style.opacity = "1";
+      noah.style.animation = "none";
+
+      // 살아있으면 원래 상태로
+      if (noahLife > 0 && !isEnding) {
+        noah.src = idleIMG;
+        noah.style.transform = "scaleX(-1)";
+
+      }
+    }
+  }, 80);
+
+  // ☠️ 사망 처리
+  if (noahLife <= 0) {
+    clearInterval(blink);
+    noahDie();
+  }
+}
+
+
+function updateLifeUI() {
+  lifeUI.innerHTML = "";
+
+  for (let i = 0; i < noahLife; i++) {
+    const heart = document.createElement("img");
+    heart.src = "./목숨.png";   // ← 네가 올린 하트 PNG
+    heart.className = "life-heart";
+    lifeUI.appendChild(heart);
+  }
+}
+
+
+function noahDie() {
+  monsterAlive = false;
+  isEnding = false;
+
+  // 조작 완전 차단
+  window.onkeydown = null;
+  window.onkeyup = null;
+
+  // 노아 죽음 이미지
+  noah.src = "./노아 죽음.png";
+
+  // 히트박스 제거
+  hitbox.style.display = "none";
+
+  // BGM 정지
+  if (bgm) {
+    bgm.pause();
+    bgm.currentTime = 0;
+  }
+
+  // 다시하기 UI 표시
+  document.getElementById("retry").style.display = "flex";
+}
+
+
+// ===========================
+// 💥 보스 사망
+// ===========================
+function killMonster() {
+  monsterAlive = false;
+  const monster = document.getElementById("monster");
+
+  monster.style.transition = "transform .15s, filter .15s";
+  monster.style.transform = "scale(1.3)";
+  monster.style.filter = "brightness(3)";
+
+  setTimeout(()=>{
+    monster.style.transition = "transform .25s, opacity .25s";
+    monster.style.transform = "scale(2)";
+    monster.style.opacity = 0;
+  },150);
+  // 🔊 괴물 터짐 사운드 (2번)
+monsterExplodeSound.currentTime = 0;
+monsterExplodeSound.volume = 1.0;
+monsterExplodeSound.play().catch(()=>{});
+
+// 🔊 잠깐 후 울음 사운드 (1번)
+setTimeout(() => {
+  monsterCrySound.currentTime = 0;
+  monsterCrySound.volume = 1.0;
+  monsterCrySound.play().catch(()=>{});
+}, 400);
+
+  setTimeout(()=>{
+    const icons = [
+      "./메세지 아이콘.png",
+      "./폴더 아이콘.png",
+      "./음악아이콘.png",
+      "./인터넷 로고.png"
+    ];
+
+    const list = [...icons];
+    while (list.length < 25)
+      list.push(icons[Math.floor(Math.random()*icons.length)]);
+
+    list.forEach(src=>{
+      const i = document.createElement("img");
+      i.src = src;
+      i.style.position="absolute";
+      i.style.width="8%";
+      i.style.left="50%";
+      i.style.top="50%";
+      document.querySelector(".game-area").appendChild(i);
+
+      let x=48+Math.random()*4, y=48+Math.random()*4;
+      let vx=(Math.random()-.5)*4, vy=Math.random()*-4-1;
+
+      const fall=setInterval(()=>{
+        x+=vx; y+=vy; vy+=.15;
+        i.style.left=x+"%";
+        i.style.top=y+"%";
+        if(y>120){ clearInterval(fall); i.remove(); }
+      },16);
+    });
+  },200);
+
+  setTimeout(() => {
+  // 🎯 노아 점프 & 추락 시작 (아이콘 터진 후 1초)
+  startEndingSequence();
+}, 2500); // 아이콘(1.5초) + 여유 1초
+
+
+}
+
+// ===========================
+// 🎬 엔딩 연출
+// ===========================
+function startEndingSequence() {
+  isEnding = true;
+
+  // 🎯 점프 시작
+  endingY = 0;
+  endingVy = 2.2;              // 점프 속도 줄임
+  noah.src = jumpIMG;
+
+  // ⏱ 0.6초 동안은 공중에 떠 있게
+  setTimeout(() => {
+    endingVy = -0.2;           // 그 다음부터 추락 시작
+  }, 600);
+}
+
+
+// ===========================
+// 루프
+// ===========================
+function loop() {
+  if (isJump) {
+    vy -= .08;
+    y += vy;
+    noah.style.bottom = (GROUND_NOAH+y)+"%";
+    hitbox.style.bottom = (HITBOX_BASE_BOTTOM+y)+"%";
+    if (y<=0) {
+      y=0; vy=0; isJump=false;
+      noah.style.bottom=GROUND_NOAH+"%";
+      hitbox.style.bottom=HITBOX_DEFAULT.bottom;
+      if(!isDefending) noah.src=idleIMG;
+    }
+  }
+
+  if (isEnding) {
+   // 🎵 BGM 페이드아웃 시작
+  let fadeAudio = setInterval(() => {
+    if (bgm.volume > 0.05) {
+      bgm.volume -= 0.05;
+    } else {
+      bgm.volume = 0;
+      bgm.pause();
+      clearInterval(fadeAudio);
+    }
+  }, 100);
+    endingVy -= .12;
+    endingY += endingVy;
+    noah.style.bottom = (GROUND_NOAH+endingY)+"%";
+    hitbox.style.bottom = (GROUND_HITBOX+endingY)+"%";
+
+    if (endingY < -70) {
+      document.getElementById("fade").style.opacity = 1;
+      setTimeout(()=>location.href="noah last.html",1500);
+      isEnding=false;
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+loop();
+updateLifeUI();
+
+// ===========================
+// 키 입력
+// ===========================
+window.addEventListener("keydown",e=>{
+  // 🔊 BGM 최초 재생 (브라우저 자동재생 제한 때문에 키 입력 때 시작)
+  if (bgm && bgm.paused) {
+    bgm.volume = 1.0; // 0~1
+    bgm.play().catch(()=>{});
+  }
+
+  if(e.code==="Space"&&!isJump&&!isSlide){
+    isJump=true; vy=2.2; noah.src=jumpIMG;
+  }
+  if(e.code==="ArrowDown"&&!isJump&&!isSlide){
+    isSlide=true; noah.src=slideIMG;
+    hitbox.style.height=HITBOX_SLIDE.height;
+    hitbox.style.bottom=HITBOX_SLIDE.bottom;
+  }
+  if(e.code==="KeyZ"&&!isJump){
+    isDefending=true; noah.src="./노아 방어.png";
+  }
+});
+
+window.addEventListener("keyup",e=>{
+  if(e.code==="ArrowDown"){
+    isSlide=false; noah.src=idleIMG;
+    hitbox.style.height=HITBOX_DEFAULT.height;
+    hitbox.style.bottom=HITBOX_DEFAULT.bottom;
+  }
+  if(e.code==="KeyZ"){
+    isDefending=false; noah.src=idleIMG;
+  }
+});
+
+function reflectBeam(beam) {
+
+  /* =========================
+     1️⃣ 현재 빔 위치 계산
+  ========================= */
+  const beamRect = beam.getBoundingClientRect();
+  const gameRect = document
+    .querySelector(".game-area")
+    .getBoundingClientRect();
+
+  let x = ((beamRect.left - gameRect.left) / gameRect.width) * 100;
+  let y = ((beamRect.top - gameRect.top) / gameRect.height) * 100;
+
+  /* =========================
+     2️⃣ 빔 방향 반전
+  ========================= */
+  beam.style.left = x + "%";
+  beam.style.top = y + "%";
+  beam.style.right = "auto";
+  beam.style.transform = "scaleX(-1)";
+
+  // 🔊 빔 반사 사운드
+beamReflectSound.currentTime = 0;
+beamReflectSound.volume = 0.7;
+beamReflectSound.play().catch(()=>{});
+
+  /* =========================
+     3️⃣ 반사 이동 루프
+  ========================= */
+  const reflectInterval = setInterval(() => {
+
+    // 빔 이동
+    x += 2.5;
+    beam.style.left = x + "%";
+
+    const monsterRect = document
+      .getElementById("monster")
+      .getBoundingClientRect();
+
+    const beamNow = beam.getBoundingClientRect();
+
+    /* =========================
+       4️⃣ 괴물 충돌 판정
+    ========================= */
+    const hitMonster =
+      beamNow.left < monsterRect.right &&
+      beamNow.right > monsterRect.left &&
+      beamNow.top < monsterRect.bottom &&
+      beamNow.bottom > monsterRect.top;
+
+    if (hitMonster) {
+
+      monsterHP--;
+
+      // 🔊 몬스터 피격 사운드
+monsterHitSound.currentTime = 0;
+monsterHitSound.play().catch(()=>{});
+
+
+      const monster = document.getElementById("monster");
+
+      /* 🔥 데미지 연출 */
+      monster.style.filter =
+        "brightness(2) sepia(1) hue-rotate(-30deg)";
+      monster.style.opacity = "0.5";
+
+      setTimeout(() => {
+        monster.style.filter = "none";
+        monster.style.opacity = "1";
+      }, 120);
+
+      beam.remove();
+      clearInterval(reflectInterval);
+
+      if (monsterHP <= 0) {
+        killMonster();
+      }
+      return;
+    }
+
+    /* =========================
+       5️⃣ 화면 밖 처리
+    ========================= */
+    if (x > 120) {
+      beam.remove();
+      clearInterval(reflectInterval);
+    }
+
+  }, 16);
+}
+
+</script>
+</body>
+</html>
+
+
+
